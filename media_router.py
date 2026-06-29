@@ -370,7 +370,16 @@ def apply_islamic_cinematic_broll(
     candidates.sort(reverse=True)
     broll_indices = {idx for _, idx in candidates[:target_broll]}
     if not broll_indices and len(scenes) >= 4:
-        broll_indices.add(len(scenes) // 2)
+        for mid in (len(scenes) // 2, len(scenes) // 2 + 1, 1):
+            if mid <= 0 or mid >= len(scenes) - 1:
+                continue
+            probe = dict(scenes[mid])
+            if probe.get("quran_verse") or str(probe.get("presentation") or "").lower() == "quran_text":
+                continue
+            if str(probe.get("media_source") or "") in {"map_slide", "quran_slide"}:
+                continue
+            broll_indices.add(mid)
+            break
 
     mixed: list[Scene] = []
     for idx, scene in enumerate(scenes):
@@ -432,7 +441,11 @@ def apply_islamic_scene_variety(
                 item["presentation"] = "ken_burns_zoom"
                 item["media_type"] = "ai"
                 item["media_source"] = "ai_image"
-        elif not quran_assigned and idx == quran_slot and include_quran:
+        elif not quran_assigned and include_quran and item.get("quran_verse"):
+            item["presentation"] = "quran_text"
+            item["media_source"] = "quran_slide"
+            quran_assigned = True
+        elif not quran_assigned and idx == len(scenes) - 1 and include_quran and kind == "closing_lesson":
             item["presentation"] = "quran_text"
             item["media_source"] = "quran_slide"
             quran_assigned = True
