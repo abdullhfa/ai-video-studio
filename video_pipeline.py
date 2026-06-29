@@ -1072,38 +1072,9 @@ def fetch_one_pexels_photo(
 
 
 def _imagerouter_model(settings: dict[str, Any] | None = None) -> str:
-    settings = settings or {}
-    model = str(settings.get("imagerouter_model") or "black-forest-labs/FLUX-1-schnell").strip()
-    if model.lower() in {"test/test", "test", ""}:
-        model = "black-forest-labs/FLUX-1-schnell"
-    return model
+    from image_providers import image_provider_label
 
-
-def _imagerouter_generate_url(prompt: str, width: int, height: int, settings: dict[str, Any] | None = None) -> str:
-    api_key = _read_secret("imagerouter_secret.txt")
-    model = _imagerouter_model(settings)
-    response = requests.post(
-        "https://api.imagerouter.io/v1/openai/images/generations",
-        headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
-        json={
-            "prompt": prompt,
-            "model": model,
-            "size": f"{width}x{height}",
-            "response_format": "url",
-            "output_format": "webp",
-        },
-        timeout=180,
-    )
-    response.raise_for_status()
-    payload = response.json()
-    if payload.get("error"):
-        err = payload["error"]
-        message = err.get("message") if isinstance(err, dict) else str(err)
-        raise RuntimeError(f"ImageRouter: {message}")
-    data = payload.get("data")
-    if not data:
-        raise RuntimeError(f"ImageRouter: unexpected response keys {list(payload.keys())}")
-    return str(data[0]["url"])
+    return image_provider_label(settings)
 
 
 def generate_single_ai_image(
@@ -1116,6 +1087,7 @@ def generate_single_ai_image(
     settings: dict | None = None,
     log: Callable[[str], None] | None = None,
 ) -> Path:
+    from image_providers import generate_image_bytes, image_provider_label, normalize_production_settings
     from image_quality import (
         evaluate_image_quality,
         passes_quality,
@@ -1130,7 +1102,7 @@ def generate_single_ai_image(
     )
     from visual_variation import append_visual_variation
 
-    settings = settings or {}
+    settings = normalize_production_settings(settings or {})
     raw_seed = (scene or {}).get("visual_variation_seed")
     if isinstance(raw_seed, int) and raw_seed != 0:
         seed = raw_seed
@@ -1194,17 +1166,23 @@ def generate_single_ai_image(
             trial_prompt = append_visual_variation(base_prompt, seed, attempt=attempt)
             trial_prompt = f"{trial_prompt}, {regeneration_prompt_suffix(attempt)}"
         if attempt == 0 and log:
-            log(f"  🎨 ImageRouter Model: {_imagerouter_model(settings)}")
+            log(f"  🎨 Image Provider: {image_provider_label(settings)}")
         try:
-            url = _imagerouter_generate_url(trial_prompt, width, height, settings)
+            raw_bytes = generate_image_bytes(
+                trial_prompt,
+                width,
+                height,
+                settings,
+                seed=seed if attempt == 0 else (seed + attempt),
+            )
         except requests.HTTPError as exc:
             status = exc.response.status_code if exc.response is not None else "?"
-            raise RuntimeError(f"ImageRouter {status}: {exc.response.reason if exc.response else exc}") from exc
-        except (requests.RequestException, KeyError, IndexError, TypeError) as exc:
-            raise RuntimeError(f"ImageRouter: {_short_error(exc)}") from exc
+            raise RuntimeError(f"Image provider HTTP {status}: {exc}") from exc
+        except (requests.RequestException, RuntimeError, KeyError, IndexError, TypeError) as exc:
+            raise RuntimeError(f"Image provider: {_short_error(exc)}") from exc
 
         raw_path = IMAGE_DIR / f"part{idx}_raw_{attempt}"
-        _download_image(url, raw_path)
+        raw_path.write_bytes(raw_bytes)
         out_path = _prepare_image_file(raw_path)
         last_path = out_path
 
@@ -1434,6 +1412,64 @@ def _scene_slide_fallback(scene: Scene, visual: str, width: int, height: int, id
     )
 
 
+def _islamic_scene_kind_fallback(
+    scene: Scene,
+    visual: str,
+    topic: str,
+    idx: int,
+    preset: FormatPreset,
+    log: Callable[[str], None],
+    settings: dict | None = None,
+) -> Path:
+    """Islamic-safe fallbacks by scene_kind — never random Pexels photos for historical events."""
+    width = preset["width"]
+    height = preset["height"]
+    orientation = preset["orientation"]
+    kind = str(scene.get("scene_kind") or "").lower()
+    presentation = str(scene.get("presentation") or "").lower()
+    media_source = str(scene.get("media_source") or "").lower()
+
+    if kind == "landscape" or media_source == "pexels_video":
+        log(f"  • مشهد {idx + 1}: بديل إسلامي — فيديو B-roll")
+        broll_scene: Scene = {**scene}
+        if not broll_scene.get("search_query"):
+            broll_scene["search_query"] = (
+                "ancient middle east desert cinematic sunset golden hour no people no faces"
+            )
+        return fetch_one_pexels_video(visual, topic, idx, orientation, width, height, broll_scene)
+
+    if kind == "map_site" or media_source == "map_slide" or presentation == "map_slide":
+        log(f"  • مشهد {idx + 1}: بديل إسلامي — شريحة خريطة")
+        out = IMAGE_DIR / f"map_{idx}.png"
+        return _resolve_cached_slide(
+            scene,
+            topic,
+            settings,
+            idx,
+            out,
+            lambda: _create_map_slide(scene, topic, width, height, idx),
+            log,
+            "شريحة خريطة",
+        )
+
+    if scene.get("quran_verse") or media_source == "quran_slide" or presentation == "quran_text":
+        log(f"  • مشهد {idx + 1}: بديل إسلامي — شريحة آية")
+        out = IMAGE_DIR / f"quran_{idx}.png"
+        return _resolve_cached_slide(
+            scene,
+            topic,
+            settings,
+            idx,
+            out,
+            lambda: _create_quran_verse_slide(scene, width, height, idx),
+            log,
+            "شريحة آية",
+        )
+
+    log(f"  • مشهد {idx + 1}: بديل إسلامي — شريحة نصية آمنة")
+    return _scene_slide_fallback(scene, visual, width, height, idx)
+
+
 def _fetch_ai_visual_with_fallback(
     scene: Scene,
     visual: str,
@@ -1453,35 +1489,18 @@ def _fetch_ai_visual_with_fallback(
         log(f"  ⚠️ مشهد {idx + 1}: AI غير متاح ({_short_error(exc)})")
 
     islamic_locked = scene.get("router_locked") and scene.get("content_profile") == "islamic_story"
-    media_source = str(scene.get("media_source") or "").lower()
-
-    if islamic_locked and media_source == "ai_image":
-        log(f"  • مشهد {idx + 1}: بديل إسلامي — شريحة نصية")
+    if islamic_locked or str(scene.get("media_source") or "").lower() == "ai_image":
         try:
+            return _islamic_scene_kind_fallback(scene, visual, topic, idx, preset, log, settings)
+        except Exception as fb_exc:
+            log(f"  ⚠️ مشهد {idx + 1}: بديل إسلامي ({_short_error(fb_exc)})")
             return _scene_slide_fallback(scene, visual, width, height, idx)
-        except Exception as slide_exc:
-            log(f"  ⚠️ مشهد {idx + 1}: شريحة ({_short_error(slide_exc)})")
-        try:
-            log(f"  • مشهد {idx + 1}: بديل إسلامي — فيديو B-roll")
-            broll_scene: Scene = {**scene}
-            if not broll_scene.get("search_query"):
-                broll_scene["search_query"] = (
-                    "ancient middle east desert cinematic sunset golden hour no people no faces"
-                )
-            return fetch_one_pexels_video(visual, topic, idx, orientation, width, height, broll_scene)
-        except Exception as vid_exc:
-            log(f"  ⚠️ مشهد {idx + 1}: B-roll ({_short_error(vid_exc)})")
-        return _scene_slide_fallback(scene, visual, width, height, idx)
 
     try:
         log(f"  • مشهد {idx + 1}: بديل — صورة Pexels")
         return fetch_one_pexels_photo(visual, topic, idx, orientation, width, height, scene, settings, log)
     except Exception as exc:
         log(f"  ⚠️ مشهد {idx + 1}: Pexels صورة ({_short_error(exc)})")
-
-    if islamic_locked:
-        log(f"  • مشهد {idx + 1}: بديل — شريحة نصية")
-        return _scene_slide_fallback(scene, visual, width, height, idx)
 
     try:
         log(f"  • مشهد {idx + 1}: بديل — فيديو Pexels")
@@ -1923,7 +1942,7 @@ def fetch_all_scene_visuals(
     gate_enabled = settings.get("quality_gate_enabled", True)
     max_rounds = max(1, int(settings.get("visual_quality_retries", 2) or 2) + 1)
     log("🎬 تجهيز الوسائط لكل مشهد...")
-    log(f"🎨 ImageRouter Model: {_imagerouter_model(settings)}")
+    log(f"🎨 Image Provider: {_imagerouter_model(settings)}")
     paths: list[Path] = []
     for idx, scene in enumerate(scenes):
         path = fetch_scene_visual(scene, idx, topic, preset, log, settings)

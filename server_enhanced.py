@@ -113,6 +113,17 @@ DEFAULT_SETTINGS: dict[str, Any] = {
     "scene_relevance_min_score": 80,
     "visual_quality_retries": 2,
     "imagerouter_model": "black-forest-labs/FLUX-1-schnell",
+    "image_provider": "local",
+    "local_image_api_url": "http://127.0.0.1:7860",
+    "local_image_backend": "automatic1111",
+    "local_image_model": "",
+    "local_image_enabled": True,
+    "local_image_steps": 20,
+    "local_image_cfg_scale": 7.0,
+    "local_image_sampler": "DPM++ 2M Karras",
+    "local_image_timeout_sec": 600,
+    "free_mode": True,
+    "allow_paid_providers": False,
     "quality_gate_enabled": True,
     "render_engine": "ffmpeg",
     "hook_scene": True,
@@ -130,6 +141,8 @@ _VALID_MEDIA_SOURCES = {"images", "pexels", "mixed", "videos"}
 _VALID_VIDEO_FORMATS = set(FORMAT_PRESETS.keys())
 _VALID_CONTENT_PROFILES = {"auto", "islamic_story", "educational", "general"}
 _VALID_PRIVACY = {"public", "unlisted", "private"}
+_VALID_IMAGE_PROVIDERS = {"local", "imagerouter", "none"}
+_VALID_LOCAL_BACKENDS = {"automatic1111", "comfyui"}
 
 
 def _validate_settings(settings: dict[str, Any]) -> dict[str, Any]:
@@ -157,7 +170,17 @@ def _validate_settings(settings: dict[str, Any]) -> dict[str, Any]:
         s["fontsize"] = max(20, min(300, int(s.get("fontsize", 100))))
     except (TypeError, ValueError):
         s["fontsize"] = DEFAULT_SETTINGS["fontsize"]
-    return s
+    provider = str(s.get("image_provider") or DEFAULT_SETTINGS["image_provider"]).strip().lower()
+    if provider not in _VALID_IMAGE_PROVIDERS:
+        provider = DEFAULT_SETTINGS["image_provider"]
+    s["image_provider"] = provider
+    backend = str(s.get("local_image_backend") or DEFAULT_SETTINGS["local_image_backend"]).strip().lower()
+    if backend not in _VALID_LOCAL_BACKENDS:
+        backend = DEFAULT_SETTINGS["local_image_backend"]
+    s["local_image_backend"] = backend
+    from image_providers import normalize_production_settings
+
+    return normalize_production_settings(s)
 
 _log_messages: list[str] = []
 _log_lock = threading.Lock()
@@ -714,6 +737,13 @@ def _build_settings(
     hook_scene: bool | None = None,
     cliffhanger: bool | None = None,
     lesson_summary: bool | None = None,
+    image_provider: str | None = None,
+    local_image_api_url: str | None = None,
+    local_image_backend: str | None = None,
+    local_image_model: str | None = None,
+    local_image_enabled: bool | None = None,
+    free_mode: bool | None = None,
+    allow_paid_providers: bool | None = None,
 ) -> dict[str, Any]:
     valid_sources = {"auto", "gemini", "local", "manual", "scenes", "scenes_script"}
     valid_profiles = {"auto", "educational", "islamic_story", "general"}
@@ -751,7 +781,7 @@ def _build_settings(
         tts_speed=max(0.7, min(1.3, tts_speed or 0.95)),
         arabic_font=arabic_font or "NotoNaskhArabic-Regular.ttf",
     )
-    return _apply_islamic_form_flags(
+    return _apply_production_flags(
         base,
         scene_cache_enabled=scene_cache_enabled,
         force_fresh_media=force_fresh_media,
@@ -759,6 +789,13 @@ def _build_settings(
         hook_scene=hook_scene,
         cliffhanger=cliffhanger,
         lesson_summary=lesson_summary,
+        image_provider=image_provider,
+        local_image_api_url=local_image_api_url,
+        local_image_backend=local_image_backend,
+        local_image_model=local_image_model,
+        local_image_enabled=local_image_enabled,
+        free_mode=free_mode,
+        allow_paid_providers=allow_paid_providers,
     )
 
 
@@ -893,38 +930,66 @@ async def download_video():
     )
 
 
-def _apply_islamic_form_flags(settings: dict[str, Any], **flags: Any) -> dict[str, Any]:
+def _apply_production_flags(settings: dict[str, Any], **flags: Any) -> dict[str, Any]:
     merged = dict(settings)
-    for key in (
+    bool_keys = (
         "scene_cache_enabled",
         "force_fresh_media",
         "quality_gate_enabled",
         "hook_scene",
         "cliffhanger",
         "lesson_summary",
-    ):
+        "local_image_enabled",
+        "free_mode",
+        "allow_paid_providers",
+    )
+    for key in bool_keys:
         if key in flags and flags[key] is not None:
             merged[key] = _parse_bool(flags[key], bool(merged.get(key, DEFAULT_SETTINGS.get(key, True))))
-    return merged
+    if flags.get("image_provider") is not None:
+        provider = str(flags["image_provider"]).strip().lower()
+        if provider in _VALID_IMAGE_PROVIDERS:
+            merged["image_provider"] = provider
+    if flags.get("local_image_backend") is not None:
+        backend = str(flags["local_image_backend"]).strip().lower()
+        if backend in _VALID_LOCAL_BACKENDS:
+            merged["local_image_backend"] = backend
+    if flags.get("local_image_api_url") is not None:
+        merged["local_image_api_url"] = str(flags["local_image_api_url"]).strip()
+    if flags.get("local_image_model") is not None:
+        merged["local_image_model"] = str(flags["local_image_model"]).strip()
+    from image_providers import normalize_production_settings
+
+    return normalize_production_settings(merged)
+
+
+def _apply_islamic_form_flags(settings: dict[str, Any], **flags: Any) -> dict[str, Any]:
+    return _apply_production_flags(settings, **flags)
 
 
 def _log_generation_banner(settings: dict[str, Any]) -> None:
+    from image_providers import image_provider_info, normalize_production_settings
     from production_session import PIPELINE_VERSION
     from scene_cache import cache_enabled, _force_fresh_media
-    from video_pipeline import _imagerouter_model
 
+    settings = normalize_production_settings(settings)
     cache_on = cache_enabled(settings)
     gate_on = bool(settings.get("quality_gate_enabled", True))
     fresh = _force_fresh_media(settings)
+    free_mode = bool(settings.get("free_mode"))
+    provider_info = image_provider_info(settings)
     _log(
         f"🔧 Pipeline v{PIPELINE_VERSION} | cache={'ON' if cache_on else 'OFF'} | "
-        f"quality_gate={'ON' if gate_on else 'OFF'} | fresh_media={'YES' if fresh else 'NO'}"
+        f"quality_gate={'ON' if gate_on else 'OFF'} | fresh_media={'YES' if fresh else 'NO'} | "
+        f"free_mode={'ON' if free_mode else 'OFF'}"
     )
-    _log(f"🎨 ImageRouter Model: {_imagerouter_model(settings)}")
+    _log(f"🎨 Image Provider: {provider_info['label']}")
+    if free_mode:
+        _log("🆓 Free Local Mode — paid providers blocked")
     if fresh:
         _log("🧹 وضع الوسائط الجديدة: Cache معطّل — كل الصور تُولَّد من جديد")
     elif cache_on:
-        _log("♻️ Cache مفعّل — قد تُستخدم صور/صوت محفوظة (عطّله لاختبار FLUX)")
+        _log("♻️ Cache مفعّل — قد تُستخدم صور/صوت محفوظة (عطّله لاختبار التوليد المحلي)"))
 
 
 def _run_generation(topic: str, settings: dict[str, Any]) -> None:
