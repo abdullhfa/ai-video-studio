@@ -399,6 +399,23 @@
                 class="form-input w-full rounded-xl text-white bg-[#0f172a] h-12 px-3 text-sm" />
             </label>
           </div>
+          <div id="local_provider_health_box" class="mt-2 p-3 rounded-xl border border-white/10 bg-[#0f172a]/80 space-y-2">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <h5 class="text-white text-sm font-bold">🖥️ حالة مزود الصور المحلي</h5>
+              <button type="button" id="check_provider_btn"
+                class="rounded-full h-9 px-4 text-white text-xs font-bold bg-emerald-600 hover:bg-emerald-700">
+                فحص الاتصال
+              </button>
+            </div>
+            <p id="local_provider_status" class="text-sm text-[#cbd5e1]">لم يُفحص بعد — اضغط «فحص الاتصال»</p>
+            <p id="local_provider_probe" class="text-xs text-[#a59db8] hidden"></p>
+            <p id="local_provider_checked_at" class="text-xs text-slate-500 hidden"></p>
+          </div>
+          <div id="local_provider_warning" class="hidden mt-2 p-3 rounded-xl border border-amber-500/40 bg-amber-950/40 text-amber-100 text-sm leading-relaxed">
+            ⚠️ <strong>خدمة الصور المحلية غير متاحة.</strong> شغّل Automatic1111 بـ <code class="text-amber-200">--api</code>
+            على <span id="local_provider_warn_url">http://127.0.0.1:7860</span> ثم أعد الفحص.
+            بدونها سيُستخدم fallback (شرائح + B-roll) ولن تُولَّد صور <code class="text-amber-200">part*.png</code>.
+          </div>
         </div>
 
         <div id="research_preview_box" class="advanced-only mb-4 hidden p-4 rounded-xl bg-[#0b1220]/70 border border-emerald-500/30 space-y-2">
@@ -620,11 +637,12 @@
         </div>
 
         <div class="pt-2">
-          <button type="submit"
+          <button type="submit" id="generate_submit_btn"
                   class="w-full rounded-full h-12 px-4 text-white font-bold transition shadow-lg bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 focus:outline-none focus:ring-2 focus:ring-blue-400/50">
 
             🚀 إنشاء يدويًا (من الموضوع بالأعلى)
           </button>
+          <p id="generate_submit_hint" class="hidden mt-2 text-amber-300 text-xs text-center"></p>
         </div>
       </form>
 
@@ -1750,8 +1768,12 @@
       }
     }
     if (uiModeBeginnerBtn) uiModeBeginnerBtn.onclick = () => applyUiMode("beginner");
-    if (uiModeAdvancedBtn) uiModeAdvancedBtn.onclick = () => applyUiMode("advanced");
+    if (uiModeAdvancedBtn) uiModeAdvancedBtn.onclick = () => {
+      applyUiMode("advanced");
+      checkLocalProviderHealth(true);
+    };
     applyUiMode(uiMode);
+    if (uiMode === "advanced") checkLocalProviderHealth(true);
 
     function applyBeginnerFormDefaults(fd) {
       if (uiMode !== "beginner") return;
@@ -1826,9 +1848,133 @@
       fd.set("video_duration_sec", String(Math.max(60, Math.min(3600, selected || 300))));
     }
 
+    // ---- Local image provider health ----
+    let localProviderHealth = { reachable: null, skipped: false, checkedAt: null };
+
+    function usesLocalImageProvider() {
+      const provider = document.getElementById("image_provider");
+      const localEnabled = document.getElementById("local_image_enabled");
+      const freeMode = document.getElementById("free_mode");
+      const p = provider ? provider.value : "local";
+      if (p === "local") return true;
+      if (freeMode && freeMode.checked) return true;
+      return !!(localEnabled && localEnabled.checked && p !== "imagerouter" && p !== "none");
+    }
+
+    function localProviderQueryParams() {
+      const params = new URLSearchParams();
+      const provider = document.getElementById("image_provider");
+      const backend = document.getElementById("local_image_backend");
+      const apiUrl = document.getElementById("local_image_api_url");
+      if (provider) params.set("image_provider", provider.value || "local");
+      if (backend) params.set("local_image_backend", backend.value || "automatic1111");
+      if (apiUrl) params.set("local_image_api_url", apiUrl.value || "http://127.0.0.1:7860");
+      return params;
+    }
+
+    function updateGenerateSubmitState() {
+      const btn = document.getElementById("generate_submit_btn");
+      const hint = document.getElementById("generate_submit_hint");
+      if (!btn || !hint) return;
+      const needsLocal = usesLocalImageProvider();
+      const unreachable = needsLocal && localProviderHealth.reachable === false;
+      btn.classList.toggle("opacity-60", unreachable);
+      btn.classList.toggle("ring-2", unreachable);
+      btn.classList.toggle("ring-amber-400/60", unreachable);
+      if (unreachable) {
+        hint.classList.remove("hidden");
+        hint.textContent = "تحذير: A1111/ComfyUI غير متاح — سيتم fallback بدون صور GPU محلية.";
+      } else {
+        hint.classList.add("hidden");
+        hint.textContent = "";
+      }
+    }
+
+    async function checkLocalProviderHealth(silent) {
+      const statusEl = document.getElementById("local_provider_status");
+      const probeEl = document.getElementById("local_provider_probe");
+      const checkedEl = document.getElementById("local_provider_checked_at");
+      const warnBox = document.getElementById("local_provider_warning");
+      const warnUrl = document.getElementById("local_provider_warn_url");
+      const btn = document.getElementById("check_provider_btn");
+      if (!usesLocalImageProvider()) {
+        localProviderHealth = { reachable: null, skipped: true, checkedAt: Date.now() };
+        if (statusEl) statusEl.innerHTML = "ℹ️ المزود الحالي ليس <strong>local</strong> — فحص GPU غير مطلوب.";
+        if (probeEl) probeEl.classList.add("hidden");
+        if (warnBox) warnBox.classList.add("hidden");
+        updateGenerateSubmitState();
+        return localProviderHealth;
+      }
+      if (statusEl && !silent) statusEl.textContent = "جاري فحص الاتصال…";
+      if (btn) btn.disabled = true;
+      try {
+        const params = localProviderQueryParams();
+        const res = await fetch("/image/provider/health?" + params.toString());
+        const data = await res.json();
+        localProviderHealth = {
+          reachable: data.reachable === true,
+          skipped: !!data.skipped,
+          checkedAt: Date.now(),
+          detail: data.detail || "",
+          probeUrl: data.probe_url || "",
+        };
+        const apiUrl = document.getElementById("local_image_api_url");
+        if (warnUrl && apiUrl) warnUrl.textContent = apiUrl.value || "http://127.0.0.1:7860";
+        if (statusEl) {
+          if (data.reachable) {
+            statusEl.innerHTML = "✅ <strong>متصل</strong> — خدمة الصور المحلية جاهزة للتوليد.";
+          } else {
+            statusEl.innerHTML = "❌ <strong>غير متاح</strong> — لا يمكن توليد صور GPU محليًا الآن.";
+          }
+        }
+        if (probeEl) {
+          probeEl.textContent = data.probe_url ? "Probe: " + data.probe_url : "";
+          probeEl.classList.toggle("hidden", !data.probe_url);
+        }
+        if (checkedEl) {
+          checkedEl.textContent = "آخر فحص: " + new Date().toLocaleTimeString("ar");
+          checkedEl.classList.remove("hidden");
+        }
+        if (warnBox) warnBox.classList.toggle("hidden", !!data.reachable);
+      } catch (err) {
+        localProviderHealth = { reachable: false, skipped: false, checkedAt: Date.now(), detail: String(err) };
+        if (statusEl) statusEl.textContent = "❌ فشل فحص الاتصال: " + err;
+        if (warnBox) warnBox.classList.remove("hidden");
+      } finally {
+        if (btn) btn.disabled = false;
+        updateGenerateSubmitState();
+      }
+      return localProviderHealth;
+    }
+
+    async function confirmLocalProviderIfNeeded() {
+      if (!usesLocalImageProvider()) return true;
+      if (localProviderHealth.reachable === null) {
+        await checkLocalProviderHealth(true);
+      }
+      if (localProviderHealth.reachable === true || localProviderHealth.skipped) return true;
+      return window.confirm(
+        "خدمة الصور المحلية (A1111/ComfyUI) غير متاحة.\n\n" +
+        "سيتم إنشاء الفيديو بـ fallback (شرائح + B-roll) بدون صور part*.png محلية.\n\n" +
+        "هل تريد المتابعة على أي حال؟"
+      );
+    }
+
+    const checkProviderBtn = document.getElementById("check_provider_btn");
+    if (checkProviderBtn) checkProviderBtn.onclick = () => checkLocalProviderHealth(false);
+
+    ["image_provider", "local_image_backend", "local_image_api_url", "local_image_enabled", "free_mode"].forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener("change", () => {
+        localProviderHealth.reachable = null;
+        updateGenerateSubmitState();
+      });
+    });
+
     // Manual submit
     form.onsubmit = async (e) => {
       e.preventDefault();
+      if (!(await confirmLocalProviderIfNeeded())) return;
       const fd = new FormData(form);
       appendIslamicOptions(fd);
       applyBeginnerFormDefaults(fd);
@@ -1848,11 +1994,13 @@
 
     // From list
     document.getElementById("run_from_list").onclick = async () => {
+      if (!(await confirmLocalProviderIfNeeded())) return;
       await saveCurrentSettings();
       const r = await fetch("/generate_from_list");
       if (r.ok) refreshTopicsInfo();
     };
     document.getElementById("run_from_list_and_upload").onclick = async () => {
+      if (!(await confirmLocalProviderIfNeeded())) return;
       document.getElementById("upload_enabled").value = "false";
       await saveCurrentSettings();
       const r = await fetch("/generate_from_list");
