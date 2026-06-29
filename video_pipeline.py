@@ -1456,7 +1456,7 @@ def _fetch_ai_visual_with_fallback(
             log(f"  ⚠️ مشهد {idx + 1}: شريحة ({_short_error(slide_exc)})")
         try:
             log(f"  • مشهد {idx + 1}: بديل إسلامي — فيديو B-roll")
-            broll_scene: Scene = dict(scene)
+            broll_scene: Scene = {**scene}
             if not broll_scene.get("search_query"):
                 broll_scene["search_query"] = (
                     "ancient middle east desert cinematic sunset golden hour no people no faces"
