@@ -210,14 +210,34 @@ def _reset_log() -> None:
 
 
 @app.get("/image/provider/health")
-async def image_provider_health():
+async def image_provider_health(
+    image_provider: str | None = None,
+    local_image_api_url: str | None = None,
+    local_image_backend: str | None = None,
+):
     """Check local A1111/ComfyUI reachability for Free Local Mode."""
     import requests as http_requests
 
     from image_providers import image_provider_info, normalize_production_settings
 
     settings = normalize_production_settings(_load_settings())
+    if image_provider:
+        settings["image_provider"] = image_provider.strip().lower()
+    if local_image_api_url:
+        settings["local_image_api_url"] = local_image_api_url.strip()
+    if local_image_backend:
+        settings["local_image_backend"] = local_image_backend.strip().lower()
     info = image_provider_info(settings)
+    provider = str(settings.get("image_provider") or "local").lower()
+    if provider != "local":
+        return {
+            "ok": True,
+            "skipped": True,
+            "reason": f"image_provider={provider}",
+            "image_provider": info,
+            "reachable": None,
+            "detail": "Local health check not required for this provider",
+        }
     base = str(settings.get("local_image_api_url") or "http://127.0.0.1:7860").rstrip("/")
     backend = str(settings.get("local_image_backend") or "automatic1111")
     probe_url = f"{base}/sdapi/v1/sd-models" if backend == "automatic1111" else f"{base}/system_stats"
@@ -235,6 +255,7 @@ async def image_provider_health():
         "probe_url": probe_url,
         "reachable": reachable,
         "detail": detail,
+        "checked_at": time.time(),
     }
 
 
