@@ -209,6 +209,35 @@ def _reset_log() -> None:
     _generation_last_log_at = time.time()
 
 
+@app.get("/image/provider/health")
+async def image_provider_health():
+    """Check local A1111/ComfyUI reachability for Free Local Mode."""
+    import requests as http_requests
+
+    from image_providers import image_provider_info, normalize_production_settings
+
+    settings = normalize_production_settings(_load_settings())
+    info = image_provider_info(settings)
+    base = str(settings.get("local_image_api_url") or "http://127.0.0.1:7860").rstrip("/")
+    backend = str(settings.get("local_image_backend") or "automatic1111")
+    probe_url = f"{base}/sdapi/v1/sd-models" if backend == "automatic1111" else f"{base}/system_stats"
+    reachable = False
+    detail = ""
+    try:
+        resp = http_requests.get(probe_url, timeout=5)
+        reachable = resp.status_code == 200
+        detail = f"HTTP {resp.status_code}"
+    except Exception as exc:
+        detail = str(exc)
+    return {
+        "ok": reachable,
+        "image_provider": info,
+        "probe_url": probe_url,
+        "reachable": reachable,
+        "detail": detail,
+    }
+
+
 @app.get("/generation/status")
 async def generation_status():
     running = _generation_lock.locked()
