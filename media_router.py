@@ -72,8 +72,13 @@ def infer_scene_kind(scene: Scene, topic: str, profile: ResolvedProfile) -> str:
     if explicit in {"landscape", "historical_event", "map_site", "closing_lesson"}:
         return explicit
 
-    role =(scene.get("engagement_role") or "").strip().lower()
-    if role in {"hook", "narrative", "cliffhanger"} and is_islamic_story_profile(profile):
+    role = (scene.get("engagement_role") or "").strip().lower()
+    if role == "hook" and is_islamic_story_profile(profile):
+        text = _haystack(scene, topic)
+        if any(token in text for token in HISTORICAL_TOKENS) or (scene.get("visual_requirements")):
+            return "historical_event"
+        return "landscape"
+    if role in {"narrative", "cliffhanger"} and is_islamic_story_profile(profile):
         return "historical_event"
 
     text = _haystack(scene, topic)
@@ -110,12 +115,93 @@ def build_islamic_ai_prompt(scene: Scene, topic: str, settings: dict | None = No
     return append_visual_style(prompt, settings.get("visual_style"))
 
 
+def _landscape_broll_query(scene: Scene, topic: str) -> str:
+    """Safe stock search for Islamic B-roll (no faces, generic geography)."""
+    visual = re.sub(r"[^\w\s\u0600-\u06FF]", " ", (scene.get("visual") or "")).strip()
+    if visual and len(visual) > 12:
+        return f"{visual}, cinematic, no people, wide shot"[:100]
+    return (
+        "ancient middle east desert cinematic sunset golden hour aerial landscape "
+        "no people no faces"
+    )[:100]
+
+
+def _route_islamic_scene(
+    scene: Scene,
+    topic: str,
+    settings: dict[str, Any],
+    *,
+    scene_kind: str,
+    presentation: str,
+) -> dict[str, Any]:
+    """Scene policy for islamic_story: B-roll video, FLUX for events, slides for Quran/maps."""
+    routed: dict[str, Any] = dict(scene)
+    routed["router_locked"] = True
+    routed["scene_kind"] = scene_kind
+
+    if presentation == "quran_text" or routed.get("quran_verse"):
+        if presentation == "quran_text" or str(routed.get("media_source") or "") == "quran_slide":
+            routed["presentation"] = "quran_text"
+            routed["media_source"] = "quran_slide"
+            return routed
+
+    if presentation == "map_slide" or scene_kind == "map_site":
+        routed["presentation"] = "map_slide"
+        routed["media_source"] = "map_slide"
+        if routed.get("image_url"):
+            routed["media_type"] = "ai"
+            routed["media_source"] = "web_image"
+        else:
+            routed["media_type"] = "ai"
+            routed["media_source"] = "ai_image"
+            routed["ai_prompt"] = build_islamic_ai_prompt(
+                scene, f"historical map style scene about {topic}", settings
+            )
+        return routed
+
+    if scene_kind == "landscape":
+        routed["media_type"] = "pexels"
+        routed["media_source"] = "pexels_video"
+        routed["search_query"] = _landscape_broll_query(scene, topic)
+        routed["presentation"] = presentation if presentation not in {"", "static"} else "static"
+        return routed
+
+    role = str(routed.get("engagement_role") or "").strip().lower()
+    if role == "hook" and scene_kind != "historical_event":
+        routed["scene_kind"] = "landscape"
+        routed["media_type"] = "pexels"
+        routed["media_source"] = "pexels_video"
+        routed["search_query"] = _landscape_broll_query(scene, topic)
+        routed["presentation"] = "static"
+        return routed
+
+    if scene_kind == "closing_lesson":
+        if routed.get("quran_verse") and presentation in {"", "quran_text", "ken_burns_zoom"}:
+            routed["presentation"] = "quran_text"
+            routed["media_source"] = "quran_slide"
+        else:
+            routed["media_type"] = "ai"
+            routed["media_source"] = "ai_image"
+            routed["presentation"] = "ken_burns_zoom"
+            routed["ai_prompt"] = build_islamic_ai_prompt(routed, topic, settings)  # type: ignore[arg-type]
+        return routed
+
+    # historical_event — FLUX with Islamic depiction rules
+    routed["media_type"] = "ai"
+    routed["media_source"] = "ai_image"
+    routed["scene_kind"] = "historical_event"
+    if presentation in {"", "static"}:
+        routed["presentation"] = "ken_burns_zoom"
+    routed["ai_prompt"] = build_islamic_ai_prompt(routed, topic, settings)  # type: ignore[arg-type]
+    return routed
+
+
 def route_scene_media(scene: Scene, topic: str, profile: ResolvedProfile, settings: dict | None = None) -> Scene:
     settings = settings or {}
     routed: dict[str, Any] = dict(scene)
     routed["content_profile"] = profile
     scene_kind = infer_scene_kind(scene, topic, profile)
-    routed["scene_kind"] = scene_kind
+    presentation = str(routed.get("presentation") or "").strip().lower()
 
     local_file = str(routed.get("local_file") or "").strip()
     if local_file:
@@ -123,22 +209,7 @@ def route_scene_media(scene: Scene, topic: str, profile: ResolvedProfile, settin
         return routed  # type: ignore[return-value]
 
     if is_islamic_story_profile(profile):
-        routed["router_locked"] = True
-        presentation = str(routed.get("presentation") or "").strip().lower()
-        if presentation in {"quran_text", "map_slide"}:
-            pass
-        elif scene_kind == "map_site" and routed.get("image_url"):
-            routed["media_type"] = "ai"
-            routed["media_source"] = "web_image"
-        elif scene_kind == "map_site":
-            routed["media_type"] = "ai"
-            routed["media_source"] = "ai_image"
-            routed["ai_prompt"] = build_islamic_ai_prompt(scene, f"historical map style scene about {topic}", settings)
-        else:
-            routed["media_type"] = "ai"
-            routed["media_source"] = "ai_image"
-            routed["scene_kind"] = "historical_event"
-            routed["ai_prompt"] = build_islamic_ai_prompt(routed, topic, settings)  # type: ignore[arg-type]
+        routed.update(_route_islamic_scene(scene, topic, settings, scene_kind=scene_kind, presentation=presentation))
         return routed  # type: ignore[return-value]
 
     # educational / general — keep existing media_type, only enrich prompts
@@ -183,7 +254,7 @@ def route_scenes_media(scenes: list[Scene], topic: str, settings: dict[str, Any]
             item = fix_stale_islamic_visual(item, topic, story_ref, idx)  # type: ignore[assignment]
         prepared.append(item)  # type: ignore[arg-type]
 
-    routed = [route_scene_media(scene, topic, profile, settings) for scene in prepared]
+    routed = list(prepared)
 
     if is_islamic_story_profile(profile):
         include_quran = _setting_bool(settings, "include_quran", True)
@@ -208,6 +279,7 @@ def route_scenes_media(scenes: list[Scene], topic: str, settings: dict[str, Any]
 
         duration = int(settings.get("video_duration_sec") or 300)
         routed = apply_islamic_scene_variety(routed, duration, topic, include_quran=include_quran)
+        routed = apply_islamic_cinematic_broll(routed, topic, duration)
 
         from character_memory import apply_character_memory, mark_pivotal_scenes
         from scene_confidence import annotate_scenes_confidence
