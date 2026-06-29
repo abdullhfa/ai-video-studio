@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 from video_pipeline import OUTPUTS, ROOT
+from atomic_io import atomic_write_json
 
 QUEUE_PATH = OUTPUTS / "publish_queue.json"
 QUEUE_DIR = OUTPUTS / "queue"
@@ -36,8 +37,7 @@ def _load_raw() -> dict[str, Any]:
 
 
 def _save_raw(data: dict[str, Any]) -> None:
-    OUTPUTS.mkdir(parents=True, exist_ok=True)
-    QUEUE_PATH.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+    atomic_write_json(QUEUE_PATH, data)
 
 
 def list_queue_items() -> list[dict[str, Any]]:

@@ -13,6 +13,8 @@ import edge_tts  # pyright: ignore[reportMissingImports]
 import google.generativeai as _genai  # pyright: ignore[reportMissingImports]
 genai: Any = _genai
 import numpy as np
+
+from atomic_io import atomic_write_json
 import requests  # pyrefly: ignore[untyped-import]
 from moviepy.editor import (  # pyright: ignore[reportMissingImports]
     AudioClip,
@@ -114,6 +116,8 @@ SCENE_UPLOADS = OUTPUTS / "scenes" / "uploads"
 CHAPTERS_DIR = OUTPUTS / "chapters"
 API_DIR = ROOT / "api"
 FFMPEG = ROOT / "AI_Video_Gen.exe_extracted" / "ffmpeg" / "ffmpeg.exe"
+FFPROBE = FFMPEG.parent / "ffprobe.exe"
+RENDER_FPS = 24
 
 VOICE_MAP = {
     "أدم": "ar-EG-ShakirNeural",
@@ -184,10 +188,7 @@ def _save_scenes(scenes: list[Scene], *, topic: str = "", settings: dict | None 
         )
     else:
         payload = {"scenes": scenes}
-    (OUTPUTS / "scenes.json").write_text(
-        json.dumps(payload, ensure_ascii=False, indent=2),
-        encoding="utf-8",
-    )
+    atomic_write_json(OUTPUTS / "scenes.json", payload)
     _save_script([scene.get("narration") or "" for scene in scenes])
 
 
@@ -1984,6 +1985,280 @@ def _screen_text_overlay(text: str, width: int, height: int, duration: float, se
     return overlay.set_position(("center", height - bar_height - 30))
 
 
+def _render_screen_text_png(text: str, width: int, settings: dict) -> tuple[Path, int] | None:
+    """Render caption bar to PNG for FFmpeg overlay."""
+    if not text.strip():
+        return None
+
+    fontsize = max(28, int(settings.get("fontsize", 72)) // 2)
+    bar_height = min(180, max(90, fontsize + 50))
+    img = Image.new("RGBA", (width, bar_height), (0, 0, 0, 170))
+    draw = ImageDraw.Draw(img)
+    font = load_arabic_font(fontsize, "caption", settings.get("arabic_font") or settings.get("font"))
+    display = prepare_arabic(text.strip())
+    bbox = draw.textbbox((0, 0), display, font=font)
+    tw = bbox[2] - bbox[0]
+    th = bbox[3] - bbox[1]
+    x = max(20, (width - tw) // 2)
+    y = max(10, (bar_height - th) // 2)
+    draw.text((x, y), display, font=font, fill=settings.get("fontcolor", "#FFFFFF"))
+
+    out_path = VIDEO_DIR / f"caption_{abs(hash(text)) % 10_000_000}.png"
+    img.save(out_path, format="PNG")
+    return out_path, bar_height
+
+
+def _ffmpeg_run(cmd: list[str], *, label: str = "") -> None:
+    result = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace")
+    if result.returncode != 0:
+        tail = (result.stderr or result.stdout or "").strip()[-600:]
+        raise RuntimeError(f"FFmpeg failed ({label}): {tail}")
+
+
+def _probe_media_duration(path: Path) -> float:
+    if not FFPROBE.exists():
+        return 0.0
+    cmd = [
+        str(FFPROBE),
+        "-v",
+        "error",
+        "-show_entries",
+        "format=duration",
+        "-of",
+        "default=noprint_wrappers=1:nokey=1",
+        str(path),
+    ]
+    result = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace")
+    if result.returncode != 0:
+        return 0.0
+    try:
+        return max(0.0, float(result.stdout.strip()))
+    except ValueError:
+        return 0.0
+
+
+def _is_image_visual(path: Path) -> bool:
+    return path.suffix.lower() in {".jpg", ".jpeg", ".png", ".webp"} or path.name.endswith("_raw")
+
+
+def _ffmpeg_video_filter(
+    width: int,
+    height: int,
+    duration: float,
+    presentation: str,
+    *,
+    is_image: bool,
+) -> str:
+    fps = RENDER_FPS
+    cover = f"scale={width}:{height}:force_original_aspect_ratio=increase,crop={width}:{height},setsar=1"
+    if is_image and presentation in {"ken_burns_zoom", "ken_burns_pan"}:
+        frames = max(2, int(duration * fps))
+        if presentation == "ken_burns_pan":
+            pan_w = int(width * 1.25)
+            max_x = max(1, pan_w - width)
+            return (
+                f"scale={pan_w}:-2,{cover},"
+                f"zoompan=z='1':x='(on-1)*{max_x}/{frames}':y='(ih-oh)/2':"
+                f"d={frames}:s={width}x{height}:fps={fps},format=yuv420p"
+            )
+        return (
+            "scale=8000:-1,"
+            f"zoompan=z='min(zoom+0.0012,1.12)':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':"
+            f"d={frames}:s={width}x{height}:fps={fps},format=yuv420p"
+        )
+    return f"{cover},fps={fps},format=yuv420p"
+
+
+def _compose_scene_segment_ffmpeg(
+    scene: Scene,
+    audio_path: Path,
+    visual_path: Path,
+    width: int,
+    height: int,
+    clip_duration: float,
+    settings: dict,
+    segment_path: Path,
+) -> None:
+    segment_path.parent.mkdir(parents=True, exist_ok=True)
+    is_image = _is_image_visual(visual_path)
+    prepared = _prepare_image_file(visual_path) if is_image else visual_path
+    presentation = ((scene.get("presentation") if scene else None) or "static").lower()
+    vf = _ffmpeg_video_filter(width, height, clip_duration, presentation, is_image=is_image)
+    caption = _render_screen_text_png(scene.get("screen_text", ""), width, settings)
+
+    cmd: list[str] = [str(FFMPEG), "-y"]
+    if is_image:
+        cmd.extend(["-loop", "1", "-framerate", str(RENDER_FPS), "-i", str(prepared)])
+    else:
+        cmd.extend(["-i", str(prepared)])
+    cmd.extend(["-i", str(audio_path)])
+
+    if caption:
+        caption_path, bar_height = caption
+        y_pos = max(0, height - bar_height - 30)
+        cmd.extend(["-loop", "1", "-i", str(caption_path)])
+        filter_complex = (
+            f"[0:v]{vf}[base];"
+            f"[2:v]format=rgba,colorchannelmixer=aa=1[cap];"
+            f"[base][cap]overlay=(W-w)/2:{y_pos}:shortest=1[vout]"
+        )
+        cmd.extend(["-filter_complex", filter_complex, "-map", "[vout]", "-map", "1:a"])
+    else:
+        cmd.extend(["-vf", vf, "-map", "0:v", "-map", "1:a"])
+
+    cmd.extend(
+        [
+            "-t",
+            f"{clip_duration:.3f}",
+            "-af",
+            f"apad=whole_dur={clip_duration:.3f}",
+            "-c:v",
+            "libx264",
+            "-preset",
+            "veryfast",
+            "-crf",
+            "23",
+            "-pix_fmt",
+            "yuv420p",
+            "-c:a",
+            "aac",
+            "-b:a",
+            "192k",
+            "-movflags",
+            "+faststart",
+            str(segment_path),
+        ]
+    )
+    _ffmpeg_run(cmd, label=f"scene segment {segment_path.name}")
+
+
+def _compose_video_ffmpeg(
+    scenes: list[Scene],
+    audio_paths: list[Path],
+    visual_paths: list[Path],
+    settings: dict,
+    log: Callable[[str], None],
+    output_path: Path,
+) -> Path:
+    import time
+
+    from scene_timing import SCENE_TAIL_PADDING_SEC
+
+    preset = FORMAT_PRESETS[settings.get("video_format", "short")]
+    width = preset["width"]
+    height = preset["height"]
+    segments_dir = VIDEO_DIR / "segments"
+    segments_dir.mkdir(parents=True, exist_ok=True)
+    for old in segments_dir.glob("seg_*.mp4"):
+        old.unlink(missing_ok=True)
+
+    log(f"🎞️ تجميع FFmpeg ({width}x{height}) — أسرع من MoviePy...")
+    segment_paths: list[Path] = []
+
+    for idx, (scene, audio_path, visual_path) in enumerate(zip(scenes, audio_paths, visual_paths)):
+        audio_sec = _probe_media_duration(audio_path)
+        clip_duration = float(scene.get("duration_sec") or 0)
+        if clip_duration <= 0:
+            clip_duration = audio_sec + SCENE_TAIL_PADDING_SEC
+        elif clip_duration < audio_sec + 0.15:
+            clip_duration = audio_sec + SCENE_TAIL_PADDING_SEC
+
+        segment_path = segments_dir / f"seg_{idx:02d}.mp4"
+        _compose_scene_segment_ffmpeg(
+            scene, audio_path, visual_path, width, height, clip_duration, settings, segment_path
+        )
+        segment_paths.append(segment_path)
+
+    concat_list = segments_dir / "concat_list.txt"
+    concat_list.write_text(
+        "\n".join(f"file '{p.resolve().as_posix()}'" for p in segment_paths),
+        encoding="utf-8",
+    )
+    merged_path = segments_dir / "merged_no_music.mp4"
+    _ffmpeg_run(
+        [
+            str(FFMPEG),
+            "-y",
+            "-f",
+            "concat",
+            "-safe",
+            "0",
+            "-i",
+            str(concat_list),
+            "-c",
+            "copy",
+            str(merged_path),
+        ],
+        label="concat segments",
+    )
+
+    target_duration = int(settings.get("video_duration_sec", 60))
+    trim_long = settings.get("trim_to_target_duration", False)
+    music_enabled = settings.get("music_enabled", False)
+    music_file = settings.get("music_file", "music.mp3")
+    music_path = ROOT / "resources" / music_file
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    merged_duration = _probe_media_duration(merged_path)
+    if trim_long and merged_duration > target_duration + 1:
+        log(f"⚠️ قص الفيديو من {int(merged_duration)}s إلى {target_duration}s (الهدف)")
+        trimmed = segments_dir / "merged_trimmed.mp4"
+        _ffmpeg_run(
+            [
+                str(FFMPEG),
+                "-y",
+                "-i",
+                str(merged_path),
+                "-t",
+                str(target_duration),
+                "-c",
+                "copy",
+                str(trimmed),
+            ],
+            label="trim duration",
+        )
+        merged_path = trimmed
+        merged_duration = _probe_media_duration(merged_path)
+
+    if music_enabled and music_path.exists() and merged_duration > 0:
+        volume = float(settings.get("music_volume", 0.3))
+        _ffmpeg_run(
+            [
+                str(FFMPEG),
+                "-y",
+                "-i",
+                str(merged_path),
+                "-stream_loop",
+                "-1",
+                "-i",
+                str(music_path),
+                "-filter_complex",
+                f"[1:a]volume={volume}[music];[0:a][music]amix=inputs=2:duration=first:dropout_transition=2[aout]",
+                "-map",
+                "0:v",
+                "-map",
+                "[aout]",
+                "-c:v",
+                "copy",
+                "-c:a",
+                "aac",
+                "-b:a",
+                "192k",
+                "-t",
+                f"{merged_duration:.3f}",
+                "-movflags",
+                "+faststart",
+                str(output_path),
+            ],
+            label="mix music",
+        )
+    else:
+        shutil.copy2(merged_path, output_path)
+
+    log(f"✅ تم حفظ الفيديو: {output_path.name}")
+    return output_path
+
+
 def _fit_clip(clip, width: int, height: int):
     # Cover-fit: scale up so the frame is fully filled, then center-crop.
     if clip.w / clip.h >= width / height:
@@ -2029,6 +2304,46 @@ def compose_video(
     height = preset["height"]
     if output_path is None:
         output_path = OUTPUTS / preset["filename"]
+
+    render_engine = str(settings.get("render_engine", "ffmpeg")).lower()
+    use_ffmpeg = render_engine != "moviepy" and FFMPEG.exists()
+    if use_ffmpeg:
+        import time
+
+        log(f"⏳ ترميز FFmpeg (~{sum(float(s.get('duration_sec') or 0) for s in scenes):.0f}s)...")
+        stop_heartbeat = threading.Event()
+        render_started = time.monotonic()
+
+        def _encoding_heartbeat() -> None:
+            elapsed = 0
+            while not stop_heartbeat.wait(15):
+                elapsed += 15
+                log(f"  ⏳ جاري ترميز FFmpeg... {elapsed}s")
+
+        heartbeat = threading.Thread(target=_encoding_heartbeat, daemon=True)
+        heartbeat.start()
+        try:
+            result = _compose_video_ffmpeg(
+                scenes, audio_paths, visual_paths, settings, log, output_path
+            )
+        except Exception as exc:
+            log(f"⚠️ FFmpeg فشل ({_short_error(exc)}) — fallback إلى MoviePy...")
+        else:
+            stop_heartbeat.set()
+            render_elapsed = time.monotonic() - render_started
+            try:
+                from production_report import active_tracker
+
+                tracker = active_tracker()
+                if tracker is not None:
+                    tracker.record_phase_time("render", render_elapsed)
+                    tracker.record_video_duration(_probe_media_duration(output_path))
+            except ImportError:
+                pass
+            log(f"✅ اكتمل الترميز في {int(render_elapsed)}s (FFmpeg)")
+            return result
+        finally:
+            stop_heartbeat.set()
 
     if FFMPEG.exists():
         import moviepy.config as moviepy_config  # pyright: ignore[reportMissingImports]

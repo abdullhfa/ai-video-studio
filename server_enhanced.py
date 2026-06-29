@@ -13,6 +13,8 @@ from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Stre
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
+from atomic_io import atomic_write_json, atomic_write_text
+
 from scene_script import DEFAULT_SCRIPT_TEMPLATE, parse_scenes_full_text, scenes_to_script_text
 from topic_research import prepare_scenes_for_media, research_for_topic, research_topic_with_agent
 from video_duration import TARGET_DURATION_OPTIONS, clamp_duration, get_mode_info
@@ -112,6 +114,7 @@ DEFAULT_SETTINGS: dict[str, Any] = {
     "visual_quality_retries": 2,
     "imagerouter_model": "black-forest-labs/FLUX-1-schnell",
     "quality_gate_enabled": True,
+    "render_engine": "ffmpeg",
     "hook_scene": True,
     "cliffhanger": True,
     "lesson_summary": True,
@@ -119,6 +122,42 @@ DEFAULT_SETTINGS: dict[str, Any] = {
     "youtube_playlist_id": "",
     "youtube_schedule_at": "",
 }
+
+GENERATION_TIMEOUT_SEC = 60 * 60  # 1 hour max per generation run
+
+_VALID_VOICES = {"أدم", "سلمى", "حامد"}
+_VALID_MEDIA_SOURCES = {"images", "pexels", "mixed", "videos"}
+_VALID_VIDEO_FORMATS = set(FORMAT_PRESETS.keys())
+_VALID_CONTENT_PROFILES = {"auto", "islamic_story", "educational", "general"}
+_VALID_PRIVACY = {"public", "unlisted", "private"}
+
+
+def _validate_settings(settings: dict[str, Any]) -> dict[str, Any]:
+    """Validate settings and return a safe copy."""
+    s = dict(settings)
+    if s.get("voice_name") not in _VALID_VOICES:
+        s["voice_name"] = DEFAULT_SETTINGS["voice_name"]
+    if s.get("media_source") not in _VALID_MEDIA_SOURCES:
+        s["media_source"] = DEFAULT_SETTINGS["media_source"]
+    if s.get("video_format") not in _VALID_VIDEO_FORMATS:
+        s["video_format"] = DEFAULT_SETTINGS["video_format"]
+    if s.get("content_profile") not in _VALID_CONTENT_PROFILES:
+        s["content_profile"] = DEFAULT_SETTINGS["content_profile"]
+    if s.get("youtube_privacy") not in _VALID_PRIVACY:
+        s["youtube_privacy"] = DEFAULT_SETTINGS["youtube_privacy"]
+    try:
+        s["music_volume"] = max(0.0, min(1.0, float(s.get("music_volume", 0.5))))
+    except (TypeError, ValueError):
+        s["music_volume"] = DEFAULT_SETTINGS["music_volume"]
+    try:
+        s["tts_speed"] = max(0.5, min(2.0, float(s.get("tts_speed", 0.95))))
+    except (TypeError, ValueError):
+        s["tts_speed"] = DEFAULT_SETTINGS["tts_speed"]
+    try:
+        s["fontsize"] = max(20, min(300, int(s.get("fontsize", 100))))
+    except (TypeError, ValueError):
+        s["fontsize"] = DEFAULT_SETTINGS["fontsize"]
+    return s
 
 _log_messages: list[str] = []
 _log_lock = threading.Lock()
@@ -199,8 +238,8 @@ def _load_settings() -> dict[str, Any]:
 
 
 def _save_settings(settings: dict[str, Any]) -> None:
-    OUTPUTS.mkdir(parents=True, exist_ok=True)
-    SETTINGS_PATH.write_text(json.dumps(settings, ensure_ascii=False, indent=2), encoding="utf-8")
+    settings = _validate_settings(settings)
+    atomic_write_json(SETTINGS_PATH, settings)
 
 
 def _collect_settings(**params: Any) -> dict[str, Any]:
@@ -491,8 +530,18 @@ async def approve_publish():
 def _start_queue_upload(item_id: str) -> None:
     if not is_authorized():
         raise HTTPException(status_code=401, detail="اربط حساب YouTube أولاً")
+
+    item = get_queue_item(item_id)
+    if not item:
+        _log(f"⚠️ عنصر النشر غير موجود: {item_id}")
+        return
+    if item.get("status") not in {"pending", "scheduled", "failed"}:
+        _log(f"⚠️ لا يمكن رفع عنصر بحالة: {item.get('status')}")
+        return
+
     if not _upload_lock.acquire(blocking=False):
-        raise HTTPException(status_code=409, detail="هناك عملية رفع قيد التشغيل")
+        _log("⚠️ هناك عملية رفع قيد التشغيل بالفعل، سيتم تجاهل الطلب")
+        return
 
     def worker():
         try:
@@ -714,6 +763,7 @@ def _build_settings(
 
 
 def _start_generation(topic: str, settings: dict[str, Any]) -> None:
+    settings = _validate_settings(settings)
     if not _generation_lock.acquire(blocking=False):
         raise HTTPException(status_code=409, detail="هناك عملية إنشاء قيد التشغيل بالفعل")
 
@@ -905,11 +955,22 @@ def _run_generation(topic: str, settings: dict[str, Any]) -> None:
     _log("  4️⃣ تجميع الفيديو النهائي")
     _log("  5️⃣ تجهيز العنوان والوصف والصورة المصغرة")
     try:
-        output = asyncio.run(generate_video(topic, settings, _log))
+        loop = asyncio.new_event_loop()
+        try:
+            output = loop.run_until_complete(
+                asyncio.wait_for(
+                    generate_video(topic, settings, _log),
+                    timeout=GENERATION_TIMEOUT_SEC,
+                )
+            )
+        finally:
+            loop.close()
         _last_output = output
         scenes = _load_scenes_from_disk()
         prepare_publish_package(topic, scenes, output, _log)
         _log("🎉 اكتمل إنشاء الفيديو — راجع المعاينة وبيانات النشر قبل الرفع")
+    except asyncio.TimeoutError:
+        _log(f"⏰ انتهت مهلة الإنشاء بعد {GENERATION_TIMEOUT_SEC // 60} دقيقة")
     except Exception as exc:
         _log(f"❌ خطأ: {exc}")
 
@@ -1262,8 +1323,11 @@ async def generate_from_list():
     if not lines:
         raise HTTPException(status_code=404, detail="قائمة المواضيع فارغة")
 
+    if _generation_lock.locked():
+        raise HTTPException(status_code=409, detail="هناك عملية إنشاء قيد التشغيل بالفعل")
+
     topic = lines.pop(0)
-    TOPICS_PATH.write_text("\n".join(lines) + ("\n" if lines else ""), encoding="utf-8")
+    atomic_write_text(TOPICS_PATH, "\n".join(lines) + ("\n" if lines else ""))
     settings = _load_settings()
     _start_generation(topic, settings)
     return {"ok": True, "topic": topic}

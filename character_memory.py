@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from story_reference import _topic_key
 from video_pipeline import Scene
 
 CharacterDef = dict[str, Any]
@@ -112,22 +113,6 @@ PIVOTAL_HINTS: dict[str, list[str]] = {
     "اصحاب الاخدود": ["خندق", "ditch", "fire", "نار", "شهادة", "فتى", "ملك", "ظالم"],
     "اصحاب الفيل": ["فيل", "elephant", "كعبة", "kaaba", "طير", "birds", "حجارة"],
 }
-
-
-def _topic_key(topic: str) -> str:
-    text = topic.lower().replace("أ", "ا").replace("إ", "ا").replace("آ", "ا")
-    if "كهف" in text:
-        return "اهل الكهف"
-    if "يوسف" in text:
-        return "يوسف"
-    if "اخدود" in text or "أخدود" in topic:
-        return "اصحاب الاخدود"
-    if "فيل" in text or "ابره" in text:
-        return "اصحاب الفيل"
-    for key in STORY_CHARACTERS:
-        if key in text:
-            return key
-    return ""
 
 
 def _haystack(scene: Scene) -> str:

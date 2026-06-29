@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from story_reference import build_local_story_reference
+from story_reference import _topic_key, build_local_story_reference
 from video_pipeline import Scene, _normalize_scene
 
 # معدل الكلام المستهدف (كلمة/دقيقة) حسب نمط الراوي
@@ -58,19 +58,6 @@ LESSON_INTROS = (
     "ومما نتعلمه من هذا المشهد أن",
     "والدرس الأعظم هنا هو أن",
 )
-
-
-def _topic_key(topic: str) -> str:
-    text = topic.lower().replace("أ", "ا").replace("إ", "ا").replace("آ", "ا")
-    if "كهف" in text:
-        return "اهل الكهف"
-    if "يوسف" in text:
-        return "يوسف"
-    if "اخدود" in text or "أخدود" in topic:
-        return "اصحاب الاخدود"
-    if "فيل" in text or "ابره" in text:
-        return "اصحاب الفيل"
-    return ""
 
 
 def engagement_enabled(settings: dict[str, Any] | None) -> bool:
