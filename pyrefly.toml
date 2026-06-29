@@ -1,0 +1,7 @@
+python-interpreter-path = "C:/Users/aalsa/AppData/Local/Programs/Python/Python312/python.exe"
+python-version = "3.12"
+python-platform = "Windows"
+site-package-path = [
+    "C:/Users/aalsa/AppData/Local/Programs/Python/Python312/Lib/site-packages",
+    "C:/Users/aalsa/AppData/Roaming/Python/Python312/site-packages",
+]

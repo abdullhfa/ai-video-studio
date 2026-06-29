@@ -1,0 +1,1746 @@
+<!DOCTYPE html> 
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>مولد فيديوهات بالذكاء الاصطناعي</title>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <!-- Iconify for social icons -->
+  <script src="https://code.iconify.design/2/2.2.1/iconify.min.js"></script>
+
+  <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin />
+  <link rel="icon" href="/resources/logo.ico" type="image/x-icon" />
+  <link rel="stylesheet" as="style" onload="this.rel='stylesheet'"
+        href="https://fonts.googleapis.com/css2?display=swap&family=Inter:wght@400;500;700;900&family=Cairo:wght@400;500;700"/>
+
+  <style>
+    body {
+      font-family: 'Cairo', 'Inter', sans-serif;
+    }
+    .app-shell {
+      --select-button-svg: url('data:image/svg+xml,%3csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2724%27 height=%2724%27 fill=%27rgb(203,213,225)%27 viewBox=%270 0 256 256%27%3e%3cpath d=%27M181.66,170.34a8,8,0,0,1,0,11.32l-48,48a8,8,0,0,1-11.32,0l-48-48a8,8,0,0,1,11.32-11.32L128,212.69l42.34-42.35A8,8,0,0,1,181.66,170.34Zm-96-84.68L128,43.31l42.34,42.35a8,8,0,0,0,11.32-11.32l-48-48a8,8,0,0,0-11.32,0l-48,48A8,8,0,0,0,85.66,85.66Z%27/%3e%3c/svg%3e');
+    }
+    /* RTL arrow spacing for selects */
+    .form-select-rtl {
+      background-position: center left 1rem;
+      padding-left: 3rem;
+      padding-right: 1rem;
+    }
+  </style>
+</head>
+  
+<body>
+    <div
+    class="app-shell relative flex min-h-screen flex-col overflow-x-hidden p-4 bg-gradient-to-br from-purple-950 via-indigo-900 to-gray-950"
+  >
+    <div class="w-full max-w-2xl mx-auto">
+      <h3 class="text-white text-3xl font-extrabold text-center pt-6 pb-3 tracking-tight">
+        🎬 أداة عمل الفيديوهات من قناة مدرسة الذكاء الاصطناعي
+      </h3>
+
+      <!-- Social -->
+      <div class="flex justify-center gap-x-6 mt-2 mb-7 text-slate-300">
+
+        <a href="https://www.youtube.com/@ArabianAiSchool" target="_blank" rel="noopener noreferrer" aria-label="YouTube" class="hover:text-white text-2xl transition">
+          <span class="iconify" data-icon="fa-brands:youtube"></span>
+        </a>
+        <a href="https://www.instagram.com/arabianaischool" target="_blank" rel="noopener noreferrer" aria-label="Instagram" class="hover:text-white text-2xl transition">
+          <span class="iconify" data-icon="fa-brands:instagram"></span>
+        </a>
+        <a href="https://www.facebook.com/arabianaischool" target="_blank" rel="noopener noreferrer" aria-label="Facebook" class="hover:text-white text-2xl transition">
+          <span class="iconify" data-icon="fa-brands:facebook"></span>
+        </a>
+        <a href="https://t.me/+vR1eI-lFmTY4NzM1" target="_blank" rel="noopener noreferrer" aria-label="Telegram" class="hover:text-white text-2xl transition">
+          <span class="iconify" data-icon="fa-brands:telegram"></span>
+        </a>
+        <a href="mailto:arabianaischool@gmail.com" aria-label="Email" class="hover:text-white text-2xl transition">
+          <span class="iconify" data-icon="mdi:email"></span>
+        </a>
+      </div>
+
+      <!-- Topics -->
+      <div class="rounded-2xl p-4 mb-6 bg-white/5 border border-white/10 backdrop-blur-xl shadow-xl">
+        <h4 class="text-white font-bold text-lg mb-2">قائمة المواضيع (اختيار تلقائي)</h4>
+        <p class="text-[#a59db8] text-sm mb-2">
+          الملف: <code class="text-xs bg-black/30 px-2 py-1 rounded">{{ topics_file }}</code>
+        </p>
+        <div class="flex items-center gap-3 text-[#a59db8] text-sm mb-3" id="topics_stats">
+          <span>المتبقي: ...</span><span> | القادم: ...</span>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <button id="run_from_list"
+            class="rounded-full h-12 px-4 text-white font-bold transition shadow-lg bg-gradient-to-r from-sky-500 to-cyan-500 hover:from-sky-600 hover:to-cyan-600 focus:outline-none focus:ring-2 focus:ring-sky-400/50">
+            ▶️ إنشاء من القائمة
+          </button>
+          <button id="run_from_list_and_upload"
+            class="rounded-full h-12 px-4 text-white font-bold transition shadow-lg bg-gradient-to-r from-emerald-500 to-lime-500 hover:from-emerald-600 hover:to-lime-600 focus:outline-none focus:ring-2 focus:ring-emerald-400/50">
+            📦 إنشاء + تجهيز بيانات النشر
+          </button>
+        </div>
+      </div>
+
+      <!-- YouTube & Channel -->
+      <div class="rounded-2xl p-4 mb-6 bg-white/5 border border-white/10 backdrop-blur-xl shadow-xl space-y-4">
+        <h4 class="text-white font-bold text-lg">YouTube — المرحلة 2: النشر</h4>
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-1">
+          <div id="yt_status" class="text-sm text-[#a59db8]">حالة الربط: ...</div>
+          <div class="flex flex-wrap gap-2">
+          <a href="/youtube/auth/start"
+               id="youtube_connect_btn"
+               class="rounded-full h-10 px-4 flex items-center text-white font-bold transition bg-gradient-to-r from-rose-500 to-red-600 hover:from-rose-600 hover:to-red-700">
+              🔗 ربط YouTube (OAuth)
+            </a>
+            <button type="button" id="youtube_disconnect_btn"
+              class="hidden rounded-full h-10 px-4 text-white font-bold bg-slate-600 hover:bg-slate-700">
+              فصل الحساب
+            </button>
+            <button type="button" id="refresh_playlists_btn"
+              class="hidden rounded-full h-10 px-4 text-white font-bold bg-indigo-600 hover:bg-indigo-700">
+              🔄 تحديث قوائم التشغيل
+            </button>
+        </div>
+        </div>
+        <p class="text-[#a59db8] text-xs">إنشاء → اعتماد → قائمة النشر → رفع YouTube</p>
+
+        <details class="rounded-xl bg-[#0b1220]/70 border border-white/10 p-3">
+          <summary class="text-white font-bold cursor-pointer">⚙️ إعدادات قالب القناة</summary>
+          <div class="mt-3 space-y-3">
+          <div>
+              <label class="block text-[#cbd5e1] text-xs font-bold mb-1">اسم القناة</label>
+              <input id="channel_name" type="text"
+                value="{{ channel_template.channel_name|default('alsawalmeh btec pro') }}"
+                class="form-input w-full rounded-xl text-white bg-[#0f172a] h-11 p-3 text-sm" />
+            </div>
+            <div>
+              <label class="block text-[#cbd5e1] text-xs font-bold mb-1">وصف افتراضي (يُضاف لكل فيديو)</label>
+              <textarea id="channel_default_description" rows="3"
+                class="form-textarea w-full rounded-xl text-white bg-[#0f172a] p-3 text-sm">{{ channel_template.default_description|default('') }}</textarea>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+              <div>
+                <label class="block text-[#cbd5e1] text-xs font-bold mb-1">وسوم افتراضية (فاصلة)</label>
+                <input id="channel_default_tags" type="text"
+                  value="{{ channel_template.default_tags|join(', ') }}"
+                  class="form-input w-full rounded-xl text-white bg-[#0f172a] h-11 p-3 text-sm" />
+              </div>
+              <div>
+                <label class="block text-[#cbd5e1] text-xs font-bold mb-1">علامة مائية</label>
+                <input id="channel_watermark_text" type="text"
+                  value="{{ channel_template.watermark_text|default('alsawalmeh btec pro') }}"
+                  class="form-input w-full rounded-xl text-white bg-[#0f172a] h-11 p-3 text-sm" />
+              </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+              <div>
+                <label class="block text-[#cbd5e1] text-xs font-bold mb-1">بادئة العنوان</label>
+                <input id="title_prefix" type="text"
+                  value="{{ channel_template.title_prefix|default('') }}"
+                  class="form-input w-full rounded-xl text-white bg-[#0f172a] h-11 p-3 text-sm" />
+              </div>
+              <div>
+                <label class="block text-[#cbd5e1] text-xs font-bold mb-1">لاحقة العنوان</label>
+                <input id="title_suffix" type="text"
+                  value="{{ channel_template.title_suffix|default(' | BTEC Pro') }}"
+                  class="form-input w-full rounded-xl text-white bg-[#0f172a] h-11 p-3 text-sm" />
+              </div>
+            </div>
+            <button type="button" id="save_channel_template"
+              class="rounded-full h-10 px-4 text-white text-sm font-bold bg-indigo-600 hover:bg-indigo-700">
+              حفظ قالب القناة
+            </button>
+          </div>
+        </details>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label for="youtube_privacy" class="block text-white text-sm font-bold mb-2">الخصوصية</label>
+            <select name="youtube_privacy" id="youtube_privacy"
+                    class="form-select form-select-rtl w-full rounded-xl text-white bg-[#2d2938] h-12 focus:outline-none focus:ring-2 focus:ring-sky-400/40"
+                    title="الخصوصية">
+              <option value="public"   {% if settings.youtube_privacy == 'public' %}selected{% endif %}>Public — عام</option>
+              <option value="unlisted" {% if settings.youtube_privacy == 'unlisted' %}selected{% endif %}>Unlisted — غير مدرج</option>
+              <option value="private"  {% if settings.youtube_privacy == 'private' %}selected{% endif %}>Private — خاص</option>
+            </select>
+          </div>
+          <div>
+            <label for="youtube_playlist" class="block text-white text-sm font-bold mb-2">قائمة التشغيل (Playlist)</label>
+            <select id="youtube_playlist" name="youtube_playlist_id"
+                    class="form-select form-select-rtl w-full rounded-xl text-white bg-[#2d2938] h-12 focus:outline-none focus:ring-2 focus:ring-violet-400/40"
+                    title="قائمة التشغيل">
+              <option value="">— بدون قائمة —</option>
+              {% for playlist in playlists %}
+                <option value="{{ playlist.id }}" {% if settings.youtube_playlist_id|default('') == playlist.id %}selected{% endif %}>
+                  {{ playlist.name }}{% if not playlist.id %} (غير مربوطة){% endif %}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+          <div>
+            <label for="youtube_schedule_at" class="block text-white text-sm font-bold mb-2">موعد النشر (جدولة)</label>
+            <input type="datetime-local" id="youtube_schedule_at" name="youtube_schedule_at"
+              class="form-input w-full rounded-xl text-white bg-[#2d2938] h-12 p-3"
+              title="موعد النشر (جدولة)" />
+            <p class="text-[#a59db8] text-xs mt-1">اتركه فارغاً للنشر الفوري بعد الرفع</p>
+        </div>
+          <div>
+            <label for="youtube_category_display" class="block text-white text-sm font-bold mb-2">الفئة</label>
+            <input type="text" id="youtube_category_display" readonly value="Education — تعليم"
+              class="form-input w-full rounded-xl text-[#cbd5e1] bg-[#1e293b] h-12 p-3"
+              title="الفئة" />
+      </div>
+          <div class="md:col-span-2">
+            <label for="youtube_made_for_kids" class="block text-white text-sm font-bold mb-2">محتوى الأطفال</label>
+            <select id="youtube_made_for_kids" name="youtube_made_for_kids"
+                    class="form-select form-select-rtl w-full rounded-xl text-white bg-[#2d2938] h-12"
+                    title="محتوى الأطفال">
+              <option value="false" selected>No, it's not made for kids</option>
+              <option value="true">Yes, it's made for kids</option>
+            </select>
+          </div>
+        </div>
+        <input type="hidden" id="upload_enabled" value="false" />
+      </div>
+      <form id="form" class="rounded-2xl p-4 bg-white/5 border border-white/10 backdrop-blur-xl shadow-xl">
+        <div class="mb-4">
+          <label for="topic" class="block text-white text-sm font-bold mb-2">موضوع الفيديو</label>
+         <input id="topic" name="topic" required
+                 class="form-input w-full rounded-xl text-white bg-[#0f172a] h-14 p-4 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-400/40"
+
+                 placeholder="مثال: 5 حقائق مذهلة عن مصر"/>
+          <p id="topic_script_warning" class="hidden text-amber-300 text-xs mt-2"></p>
+        </div>
+
+        <div class="mb-4">
+          <label for="voice_name" class="block text-white text-sm font-bold mb-2">الصوت</label>
+          <select id="voice_name" name="voice_name"
+                  class="form-select form-select-rtl w-full rounded-xl text-white bg-[#2d2938] h-14 focus:outline-none focus:ring-2 focus:ring-sky-400/40"
+                  title="الصوت">
+            {% for voice in voice_options %}
+              <option value="{{ voice }}" {% if settings.voice_name == voice %}selected{% endif %}>{{ voice }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="mb-4">
+          <label for="script_source" class="block text-white text-sm font-bold mb-2">مصدر النص والمشاهد</label>
+          <select name="script_source" id="script_source"
+                  class="form-select form-select-rtl w-full rounded-xl text-white bg-[#2d2938] h-14 focus:outline-none focus:ring-2 focus:ring-sky-400/40"
+                  title="مصدر النص والمشاهد">
+            <option value="scenes_script" {% if settings.script_source|default('scenes') == 'scenes_script' %}selected{% endif %}>سيناريو نصي كامل (موصى به للدقة) ⭐</option>
+            <option value="scenes" {% if settings.script_source|default('scenes') == 'scenes' %}selected{% endif %}>مشاهد يدوية (بطاقات)</option>
+            <option value="auto" {% if settings.script_source|default('scenes') == 'auto' %}selected{% endif %}>تلقائي (Gemini ثم بديل محلي)</option>
+            <option value="local" {% if settings.script_source|default('scenes') == 'local' %}selected{% endif %}>نص محلي فقط (بدون Gemini)</option>
+            <option value="manual" {% if settings.script_source|default('scenes') == 'manual' %}selected{% endif %}>نص يدوي (سطر = جملة)</option>
+            <option value="gemini" {% if settings.script_source|default('scenes') == 'gemini' %}selected{% endif %}>Gemini فقط</option>
+          </select>
+          <p class="text-[#a59db8] text-xs mt-2">للدقة الكاملة: اختر «سيناريو نصي كامل» وحدّد الشخصيات والطريقة والصوت لكل مشهد.</p>
+        </div>
+
+        <div class="mb-4">
+          <label for="content_profile" class="block text-white text-sm font-bold mb-2">نوع المحتوى</label>
+          <select name="content_profile" id="content_profile"
+                  class="form-select form-select-rtl w-full rounded-xl text-white bg-[#2d2938] h-14 focus:outline-none focus:ring-2 focus:ring-emerald-400/40"
+                  title="نوع المحتوى">
+            <option value="auto" {% if settings.content_profile|default('auto') == 'auto' %}selected{% endif %}>تلقائي (يكتشف من الموضوع)</option>
+            <option value="educational" {% if settings.content_profile|default('auto') == 'educational' %}selected{% endif %}>تعليمي / تقني (BTEC, Flutter...)</option>
+            <option value="islamic_story" {% if settings.content_profile|default('auto') == 'islamic_story' %}selected{% endif %}>قصة إسلامية (AI Images)</option>
+            <option value="general" {% if settings.content_profile|default('auto') == 'general' %}selected{% endif %}>عام</option>
+          </select>
+          <p class="text-[#a59db8] text-xs mt-2">للقصص الإسلامية: يُقسّم السيناريو زمنياً ويُولّد صور AI بدل فيديوهات stock العشوائية.</p>
+        </div>
+
+        <div id="islamic_options_box" class="mb-4 space-y-3 p-4 rounded-xl bg-[#0b1220]/70 border border-amber-500/25">
+          <h4 class="text-white font-bold">🕌 إعدادات القصص الإسلامية</h4>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <label class="flex items-center gap-2 text-sm text-[#cbd5e1]">
+              <input type="checkbox" name="include_quran" id="include_quran" class="rounded"
+                {% if settings.include_quran|default(true) %}checked{% endif %} />
+              إدراج الآيات القرآنية
+            </label>
+            <label class="flex items-center gap-2 text-sm text-[#cbd5e1]">
+              <input type="checkbox" name="include_hadith" id="include_hadith" class="rounded"
+                {% if settings.include_hadith|default(false) %}checked{% endif %} />
+              إدراج أحاديث (اختياري)
+            </label>
+            <label class="flex items-center gap-2 text-sm text-[#cbd5e1]">
+              <input type="checkbox" name="historical_accuracy" id="historical_accuracy" class="rounded"
+                {% if settings.historical_accuracy|default(true) %}checked{% endif %} />
+              مراجعة شرعية / دقة تاريخية
+            </label>
+            <label class="flex items-center gap-2 text-sm text-[#cbd5e1]">
+              <input type="checkbox" name="scene_cache_enabled" id="scene_cache_enabled" class="rounded"
+                {% if settings.scene_cache_enabled|default(true) %}checked{% endif %} />
+              ذاكرة المشاهد (Cache) — لا إعادة توليد إن لم يتغير النص
+            </label>
+            <label class="flex items-center gap-2 text-sm text-amber-200 font-semibold">
+              <input type="checkbox" name="force_fresh_media" id="force_fresh_media" class="rounded"
+                {% if settings.force_fresh_media|default(false) %}checked{% endif %} />
+              🧪 اختبار: وسائط جديدة 100% (تعطيل Cache + FLUX فعلي)
+            </label>
+            <label class="flex items-center gap-2 text-sm text-[#cbd5e1]">
+              <input type="checkbox" name="hook_scene" id="hook_scene" class="rounded"
+                {% if settings.hook_scene|default(true) %}checked{% endif %} />
+              افتتاحية تشويقية (Hook) — أول 30 ثانية
+            </label>
+            <label class="flex items-center gap-2 text-sm text-[#cbd5e1]">
+              <input type="checkbox" name="cliffhanger" id="cliffhanger" class="rounded"
+                {% if settings.cliffhanger|default(true) %}checked{% endif %} />
+              تشويق بين المشاهد (Cliffhanger)
+            </label>
+            <label class="flex items-center gap-2 text-sm text-[#cbd5e1]">
+              <input type="checkbox" name="lesson_summary" id="lesson_summary" class="rounded"
+                {% if settings.lesson_summary|default(true) %}checked{% endif %} />
+              ختام بالعبرة (Lesson Summary)
+            </label>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+              <label for="max_ai_video_scenes" class="block text-white text-xs font-bold mb-1">أقصى مشاهد AI Video (مستقبلاً)</label>
+              <input type="number" name="max_ai_video_scenes" id="max_ai_video_scenes" min="1" max="6" step="1"
+                value="{{ settings.max_ai_video_scenes|default(3) }}"
+                class="form-input w-full rounded-xl text-white bg-[#0f172a] h-12 px-3 text-sm" />
+            </div>
+            <div>
+              <label for="visual_style" class="block text-white text-xs font-bold mb-1">الأسلوب البصري (Style Pack)</label>
+              <select name="visual_style" id="visual_style"
+                class="form-select form-select-rtl w-full rounded-xl text-white bg-[#2d2938] h-12 text-sm">
+                <option value="cinematic_islamic" {% if settings.visual_style|default('cinematic_islamic') == 'cinematic_islamic' %}selected{% endif %}>سينمائي إسلامي (موصى به)</option>
+                <option value="documentary" {% if settings.visual_style|default('cinematic_islamic') == 'documentary' %}selected{% endif %}>وثائقي</option>
+                <option value="watercolor" {% if settings.visual_style|default('cinematic_islamic') == 'watercolor' %}selected{% endif %}>ألوان مائية</option>
+                <option value="none" {% if settings.visual_style|default('cinematic_islamic') == 'none' %}selected{% endif %}>بدون حزمة</option>
+              </select>
+            </div>
+            <div>
+              <label for="narrator_style" class="block text-white text-xs font-bold mb-1">نمط الراوي</label>
+              <select name="narrator_style" id="narrator_style"
+                class="form-select form-select-rtl w-full rounded-xl text-white bg-[#2d2938] h-12 text-sm">
+                <option value="هادئ" {% if settings.narrator_style|default('وثائقي') == 'هادئ' %}selected{% endif %}>راوٍ هادئ</option>
+                <option value="وثائقي" {% if settings.narrator_style|default('وثائقي') == 'وثائقي' %}selected{% endif %}>راوٍ وثائقي</option>
+                <option value="مؤثر" {% if settings.narrator_style|default('وثائقي') == 'مؤثر' %}selected{% endif %}>راوٍ مؤثر</option>
+              </select>
+            </div>
+            <div>
+              <label for="tts_speed" class="block text-white text-xs font-bold mb-1">سرعة القراءة (0.7–1.3)</label>
+              <input type="number" name="tts_speed" id="tts_speed" min="0.7" max="1.3" step="0.05"
+                value="{{ settings.tts_speed|default(0.95) }}"
+                class="form-input w-full rounded-xl text-white bg-[#0f172a] h-12 px-3 text-sm" />
+            </div>
+            <div>
+              <label for="arabic_font" class="block text-white text-xs font-bold mb-1">خط العربية في الشرائح</label>
+              <select name="arabic_font" id="arabic_font"
+                class="form-select form-select-rtl w-full rounded-xl text-white bg-[#2d2938] h-12 text-sm">
+                <option value="NotoNaskhArabic-Regular.ttf" {% if settings.arabic_font|default('NotoNaskhArabic-Regular.ttf') == 'NotoNaskhArabic-Regular.ttf' %}selected{% endif %}>Noto Naskh Arabic</option>
+                <option value="Amiri-Regular.ttf" {% if settings.arabic_font|default('NotoNaskhArabic-Regular.ttf') == 'Amiri-Regular.ttf' %}selected{% endif %}>Amiri</option>
+                <option value="Cairo-Regular.ttf" {% if settings.arabic_font|default('NotoNaskhArabic-Regular.ttf') == 'Cairo-Regular.ttf' %}selected{% endif %}>Cairo</option>
+              </select>
+            </div>
+          </div>
+          <p class="text-[#a59db8] text-xs">الخطوط: Amiri / Noto Naskh / Cairo مع دعم RTL والتشكيل في شرائح الآيات والنصوص.</p>
+        </div>
+
+        <div id="research_preview_box" class="mb-4 hidden p-4 rounded-xl bg-[#0b1220]/70 border border-emerald-500/30 space-y-2">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div class="flex flex-wrap items-center gap-2">
+              <h4 class="text-white font-bold">🔎 نتيجة البحث والتخطيط</h4>
+              <span id="research_engine_badge" class="hidden text-xs font-bold px-3 py-1 rounded-full border"></span>
+            </div>
+            <button type="button" id="research_topic_btn"
+              class="rounded-full h-10 px-4 text-white text-sm font-bold bg-emerald-600 hover:bg-emerald-700">
+              بحث وتحضير الموضوع
+            </button>
+          </div>
+          <p id="research_session_info" class="text-slate-400 text-xs hidden"></p>
+          <p id="research_summary" class="text-[#cbd5e1] text-sm"></p>
+          <p id="research_sources" class="text-amber-300 text-xs"></p>
+          <p id="research_events" class="text-[#a59db8] text-xs leading-relaxed"></p>
+          <p id="research_scenes_info" class="text-emerald-300 text-xs"></p>
+        </div>
+
+        <div id="quality_gate_box" class="mb-4 hidden p-4 rounded-xl bg-[#0b1220]/70 border border-violet-500/30 space-y-3">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <h4 class="text-white font-bold">🛡️ بوابة جودة الوسائط</h4>
+            <button type="button" id="refresh_quality_gate_btn"
+              class="rounded-full h-9 px-4 text-white text-xs font-bold bg-violet-600 hover:bg-violet-700">
+              تحديث
+            </button>
+          </div>
+          <p id="quality_gate_summary" class="text-[#cbd5e1] text-sm"></p>
+          <div id="quality_gate_scenes" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3"></div>
+        </div>
+
+        <div id="scenes_script_box" class="mb-4 hidden space-y-3 p-4 rounded-xl bg-[#0b1220]/70 border border-amber-500/30">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <h4 class="text-white font-bold text-lg">📝 سيناريو المشاهد (نص كامل)</h4>
+            <div class="flex flex-wrap gap-2">
+              <button type="button" id="parse_script_btn"
+                class="rounded-full h-10 px-4 text-white text-sm font-bold bg-emerald-600 hover:bg-emerald-700">
+                ✅ تحليل السيناريو → مشاهد
+              </button>
+              <button type="button" id="export_script_btn"
+                class="rounded-full h-10 px-4 text-white text-sm font-bold bg-slate-600 hover:bg-slate-700">
+                📤 تصدير من البطاقات
+              </button>
+            </div>
+          </div>
+          <p class="text-[#a59db8] text-xs">لكل مشهد: الصوت، الشخصيات، الطريقة، نمط الصوت، Prompt بصري، نص الشاشة، المدة، نوع الوسائط.</p>
+          <textarea id="custom_scenes_script" name="custom_scenes_script" rows="16"
+            class="form-textarea w-full rounded-xl text-white bg-[#0f172a] p-4 text-sm font-mono leading-relaxed focus:outline-none focus:ring-2 focus:ring-amber-400/40"
+            placeholder="--- مشهد 1 ---">{{ custom_scenes_script|default('') }}</textarea>
+          <details class="text-xs text-[#a59db8]">
+            <summary class="cursor-pointer text-amber-300">عرض قالب مثال</summary>
+            <pre class="mt-2 p-3 rounded-lg bg-black/30 overflow-x-auto whitespace-pre-wrap text-[#cbd5e1]">{{ script_template }}</pre>
+          </details>
+        </div>
+
+        <div id="scenes_box" class="mb-4 space-y-3 p-4 rounded-xl bg-[#0b1220]/70 border border-white/10">
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <h4 class="text-white font-bold text-lg">🎬 المشاهد</h4>
+            <div class="flex flex-wrap gap-2">
+              <button type="button" id="auto_generate_scenes"
+                      class="rounded-full h-10 px-4 text-white text-sm font-bold bg-violet-600 hover:bg-violet-700">
+                ✨ توليد المشاهد تلقائياً من النص
+              </button>
+              <button type="button" id="add_scene"
+                      class="rounded-full h-10 px-4 text-white text-sm font-bold bg-sky-600 hover:bg-sky-700">
+                + إضافة مشهد
+              </button>
+            </div>
+          </div>
+          <p class="text-[#a59db8] text-xs">الموضوع → سيناريو نصي (أو توليد تلقائي) → مراجعة → إنشاء الفيديو. لكل مشهد: الصوت، الشخصيات، الطريقة، نمط الصوت، Prompt بصري، نص الشاشة، المدة، نوع الوسائط.</p>
+          <p id="scenes_mode_hint" class="hidden text-amber-300 text-xs rounded-lg bg-amber-500/10 border border-amber-500/30 px-3 py-2"></p>
+          <div id="scenes_list" class="space-y-3"></div>
+          <script type="application/json" id="custom_scenes_data">{{ custom_scenes_list | tojson }}</script>
+          <input type="hidden" name="custom_scenes" id="custom_scenes_input" value="[]" />
+        </div>
+
+        <div id="custom_script_box" class="mb-4 hidden">
+          <label class="block text-white text-sm font-bold mb-2">النص اليدوي (سطر = جملة)</label>
+          <textarea name="custom_script" rows="6"
+                    class="form-textarea w-full rounded-xl text-white bg-[#0f172a] p-4 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-400/40"
+                    placeholder="الجملة الأولى&#10;الجملة الثانية&#10;الجملة الثالثة">{{ settings.custom_script|default('') }}</textarea>
+        </div>
+
+        <div class="mb-4">
+          <label for="video_format" class="block text-white text-sm font-bold mb-2">نوع الفيديو</label>
+          <select id="video_format" name="video_format"
+                  class="form-select form-select-rtl w-full rounded-xl text-white bg-[#2d2938] h-14 focus:outline-none focus:ring-2 focus:ring-sky-400/40"
+                  title="نوع الفيديو">
+            <option value="normal" {% if settings.video_format|default('normal') == 'normal' %}selected{% endif %}>فيديو عادي (16:9) — لليوتيوب العادي</option>
+            <option value="short" {% if settings.video_format|default('normal') == 'short' %}selected{% endif %}>شورت (9:16) — لليوتيوب شورتس</option>
+          </select>
+        </div>
+
+        <div class="mb-4">
+          <label for="video_duration_sec" class="block text-white text-sm font-bold mb-2">المدة المستهدفة</label>
+          <select name="video_duration_sec" id="video_duration_sec"
+                  class="form-select form-select-rtl w-full rounded-xl text-white bg-[#2d2938] h-14 focus:outline-none focus:ring-2 focus:ring-sky-400/40"
+                  title="المدة المستهدفة">
+            {% for duration in duration_options %}
+              <option value="{{ duration.seconds }}" {% if settings.video_duration_sec|default(300) == duration.seconds %}selected{% endif %}>{{ duration.label }}</option>
+            {% endfor %}
+          </select>
+          <p id="duration_mode_info" class="text-[#a59db8] text-xs mt-2">الوضع: Standard — ~20 مشهدًا</p>
+          <p class="text-[#a59db8] text-xs mt-1">للفيديوهات 30–60 دقيقة: يتم التقسيم تلقائياً إلى فصول ثم الدمج.</p>
+        </div>
+
+        <div class="mb-4">
+          <label for="media_source" class="block text-white text-sm font-bold mb-2">العناصر البصرية في الفيديو</label>
+          <select id="media_source" name="media_source"
+                  class="form-select form-select-rtl w-full rounded-xl text-white bg-[#2d2938] h-14 focus:outline-none focus:ring-2 focus:ring-sky-400/40"
+                  title="العناصر البصرية في الفيديو">
+            <option value="images" {% if settings.media_source == 'images' %}selected{% endif %}>صور (بالذكاء الاصطناعي)</option>
+            <option value="videos" {% if settings.media_source == 'videos' %}selected{% endif %}>فيديوهات </option>
+          </select>
+        </div>
+
+        <div class="mb-4">
+          <label for="caption_enabled" class="block text-white text-sm font-bold mb-2">تفعيل الكابشن</label>
+          <select name="caption_enabled" id="caption_enabled"
+                  class="form-select form-select-rtl w-full rounded-xl text-white bg-[#2d2938] h-14 focus:outline-none focus:ring-2 focus:ring-sky-400/40"
+                  title="تفعيل الكابشن">
+            <option value="true"  {% if settings.caption_enabled %}selected{% endif %}>نعم</option>
+            <option value="false" {% if not settings.caption_enabled %}selected{% endif %}>لا</option>
+          </select>
+        </div>
+
+        <div id="caption_settings" class="space-y-4 p-4 rounded-xl mb-4 bg-[#0b1220]/70 border border-white/10">
+
+          <h4 class="text-white font-bold text-lg mb-3">إعدادات الكابشن</h4>
+          <div>
+            <label for="font" class="block text-white text-sm font-bold mb-2">الخط (اسم الملف)</label>
+            <input type="text" id="font" name="font" value="{{ settings.font }}"
+                   class="form-input w-full rounded-xl text-white bg-[#2d2938] h-14 p-4 focus:outline-none focus:ring-2 focus:ring-sky-400/40"
+                   title="الخط (اسم الملف)">
+          </div>
+
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label for="fontsize" class="block text-white text-sm font-bold mb-2">حجم الخط</label>
+              <input type="number" id="fontsize" name="fontsize" value="{{ settings.fontsize }}"
+                     class="form-input w-full rounded-xl text-white bg-[#2d2938] h-14 p-4 focus:outline-none focus:ring-2 focus:ring-sky-400/40"
+                     title="حجم الخط">
+            </div>
+            <div>
+              <label for="align" class="block text-white text-sm font-bold mb-2">محاذاة النص</label>
+              <select id="align" name="align"
+                      class="form-select form-select-rtl w-full rounded-xl text-white bg-[#2d2938] h-14 focus:outline-none focus:ring-2 focus:ring-sky-400/40"
+                      title="محاذاة النص">
+                <option value="center" {% if settings.align == 'center' %}selected{% endif %}>وسط</option>
+                <option value="left"   {% if settings.align == 'left' %}selected{% endif %}>يسار</option>
+                <option value="right"  {% if settings.align == 'right' %}selected{% endif %}>يمين</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label for="fontcolor_text" class="block text-white text-sm font-bold mb-2">لون الخط</label>
+              <div class="flex items-center rounded-xl bg-[#2d2938] h-14 overflow-hidden">
+                <input type="text" id="fontcolor_text" name="fontcolor" value="{{ settings.fontcolor }}"
+                       class="flex-grow bg-transparent text-white h-14 px-4 focus:outline-none"
+                       title="لون الخط"/>
+                <div class="relative w-14 h-14 flex items-center justify-center">
+                  <input type="color" id="fontcolor_picker" value="{{ settings.fontcolor }}"
+                         class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                         aria-label="اختيار لون الخط"/>
+                  <div class="w-6 h-6 rounded-md border border-gray-500 pointer-events-none"></div>
+                </div>
+              </div>
+            </div>
+            <div>
+              <label for="stroke_color_text" class="block text-white text-sm font-bold mb-2">لون حدود النص</label>
+              <div class="flex items-center rounded-xl bg-[#2d2938] h-14 overflow-hidden">
+                <input type="text" id="stroke_color_text" name="stroke_color" value="{{ settings.stroke_color }}"
+                       class="flex-grow bg-transparent text-white h-14 px-4 focus:outline-none"
+                       title="لون حدود النص"/>
+                <div class="relative w-14 h-14 flex items-center justify-center">
+                  <input type="color" id="stroke_color_picker" value="{{ settings.stroke_color }}"
+                         class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                         aria-label="اختيار لون حدود النص"/>
+                  <div class="w-6 h-6 rounded-md border border-gray-500 pointer-events-none"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <label for="stroke_width" class="block text-white text-sm font-bold mb-2">عرض حدود النص</label>
+            <input type="number" id="stroke_width" name="stroke_width" value="{{ settings.stroke_width }}"
+                   class="form-input w-full rounded-xl text-white bg-[#2d2938] h-14 p-4 focus:outline-none focus:ring-2 focus:ring-sky-400/40"
+                   title="عرض حدود النص">
+          </div>
+
+          <div>
+            <label for="bgcolor_enabled" class="block text-white text-sm font-bold mb-2">تفعيل خلفية النص</label>
+            <select id="bgcolor_enabled" name="bgcolor_enabled"
+                    class="form-select form-select-rtl w-full rounded-xl text-white bg-[#2d2938] h-14 focus:outline-none focus:ring-2 focus:ring-sky-400/40"
+                    title="تفعيل خلفية النص">
+              <option value="false" {% if not settings.bgcolor_enabled %}selected{% endif %}>لا</option>
+              <option value="true"  {% if settings.bgcolor_enabled %}selected{% endif %}>نعم</option>
+            </select>
+          </div>
+
+          <div id="bgcolor_settings">
+            <label for="bgcolor_text" class="block text-white text-sm font-bold mb-2">لون خلفية النص</label>
+            <div class="flex items-center rounded-xl bg-[#2d2938] h-14 overflow-hidden">
+              <input type="text" id="bgcolor_text" name="bgcolor" value="{{ settings.bgcolor }}"
+                     class="flex-grow bg-transparent text-white h-14 px-4 focus:outline-none"
+                     title="لون خلفية النص"/>
+              <div class="relative w-14 h-14 flex items-center justify-center">
+                <input type="color" id="bgcolor_picker" value="{{ settings.bgcolor }}"
+                       class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                       aria-label="اختيار لون خلفية النص"/>
+                <div class="w-6 h-6 rounded-md border border-gray-500 pointer-events-none"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="pt-2">
+          <button type="submit"
+                  class="w-full rounded-full h-12 px-4 text-white font-bold transition shadow-lg bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 focus:outline-none focus:ring-2 focus:ring-blue-400/50">
+
+            🚀 إنشاء يدويًا (من الموضوع بالأعلى)
+          </button>
+        </div>
+      </form>
+
+      <div id="publish_panel" class="hidden mt-6 rounded-2xl p-4 bg-white/5 border border-white/10 backdrop-blur-xl shadow-xl space-y-4">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <h4 class="text-white font-bold text-lg">📋 بيانات النشر على YouTube</h4>
+          <button type="button" id="generate_metadata_btn"
+            class="rounded-full h-10 px-4 text-white text-sm font-bold bg-violet-600 hover:bg-violet-700">
+            ✨ توليد العنوان والوصف والوسوم
+          </button>
+        </div>
+        <div>
+          <label class="block text-[#cbd5e1] text-xs font-bold mb-1">العنوان</label>
+          <input id="publish_title" type="text"
+            value="{{ publish_metadata.title|default('') }}"
+            class="form-input w-full rounded-xl text-white bg-[#0f172a] h-11 p-3 text-sm"
+            placeholder="شرح تثبيت Flutter خطوة بخطوة للمبتدئين 2026" />
+        </div>
+        <div>
+          <label class="block text-[#cbd5e1] text-xs font-bold mb-1">الوصف</label>
+          <textarea id="publish_description" rows="5"
+            class="form-textarea w-full rounded-xl text-white bg-[#0f172a] p-3 text-sm"
+            placeholder="في هذا الفيديو نتعلم...">{{ publish_metadata.description|default('') }}</textarea>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+          <div>
+            <label class="block text-[#cbd5e1] text-xs font-bold mb-1">الوسوم (Tags)</label>
+            <textarea id="publish_tags" rows="3"
+              class="form-textarea w-full rounded-xl text-white bg-[#0f172a] p-3 text-sm"
+              placeholder="flutter, flutter tutorial, flutter arabic">{{ publish_metadata.tags|join(', ') if publish_metadata.tags else '' }}</textarea>
+          </div>
+          <div>
+            <label class="block text-[#cbd5e1] text-xs font-bold mb-1">Hashtags</label>
+            <textarea id="publish_hashtags" rows="3"
+              class="form-textarea w-full rounded-xl text-white bg-[#0f172a] p-3 text-sm"
+              placeholder="#flutter #programming #btec">{{ publish_metadata.hashtags|join(', ') if publish_metadata.hashtags else '' }}</textarea>
+          </div>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <button type="button" id="save_metadata_btn"
+            class="rounded-full h-10 px-4 text-white text-sm font-bold bg-sky-600 hover:bg-sky-700">
+            💾 حفظ بيانات النشر
+          </button>
+          <button type="button" id="regenerate_thumbnail_btn"
+            class="rounded-full h-10 px-4 text-white text-sm font-bold bg-amber-600 hover:bg-amber-700">
+            🖼️ إعادة توليد الصورة المصغرة
+          </button>
+          <label class="rounded-full h-10 px-4 text-white text-sm font-bold bg-slate-600 hover:bg-slate-700 cursor-pointer flex items-center">
+            📤 رفع صورة مصغرة
+            <input id="upload_thumbnail_input" type="file" accept="image/*" class="hidden" />
+          </label>
+        </div>
+      </div>
+
+      <div id="preview_panel" class="hidden mt-6 rounded-2xl p-4 bg-white/5 border border-white/10 backdrop-blur-xl shadow-xl space-y-4">
+        <h4 class="text-white font-bold text-lg">👁️ المعاينة النهائية</h4>
+        <video id="preview_video" controls
+          class="w-full rounded-xl bg-black max-h-[420px]"></video>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 items-start">
+          <img id="preview_thumbnail" alt="الصورة المصغرة"
+            class="w-full rounded-xl border border-white/10 hidden" />
+          <div class="space-y-3">
+            <p id="preview_status" class="text-[#a59db8] text-sm">سيظهر الفيديو هنا بعد اكتمال الإنشاء</p>
+            <a id="download_btn" href="/download/video"
+               class="hidden w-full rounded-full h-12 px-4 flex items-center justify-center text-white font-bold transition shadow-lg bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700">
+              ⬇️ تنزيل الفيديو (MP4)
+            </a>
+            <button type="button" id="approve_publish_btn"
+              class="hidden w-full rounded-full h-12 px-4 text-white font-bold bg-gradient-to-r from-fuchsia-600 to-purple-700 hover:from-fuchsia-700 hover:to-purple-800">
+              ✅ اعتماد للنشر
+            </button>
+            <button type="button" id="add_to_queue_btn"
+              class="hidden w-full rounded-full h-12 px-4 text-white font-bold bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700">
+              📥 إضافة إلى قائمة النشر
+            </button>
+            <p id="approve_status" class="text-emerald-300 text-sm hidden">✅ تم الاعتماد — أضف الفيديو إلى قائمة النشر</p>
+          </div>
+        </div>
+      </div>
+
+      <div id="queue_panel" class="hidden mt-6 rounded-2xl p-4 bg-white/5 border border-white/10 backdrop-blur-xl shadow-xl space-y-4">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <h4 class="text-white font-bold text-lg">📤 قائمة النشر (Queue)</h4>
+          <button type="button" id="process_queue_btn"
+            class="rounded-full h-10 px-4 text-white text-sm font-bold bg-emerald-600 hover:bg-emerald-700">
+            ⬆️ رفع أول فيديو في القائمة
+          </button>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm text-[#cbd5e1]">
+            <thead>
+              <tr class="text-right border-b border-white/10">
+                <th class="py-2 px-2">الحالة</th>
+                <th class="py-2 px-2">العنوان</th>
+                <th class="py-2 px-2">الخصوصية</th>
+                <th class="py-2 px-2">إجراء</th>
+              </tr>
+            </thead>
+            <tbody id="queue_table_body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div id="history_panel" class="hidden mt-6 rounded-2xl p-4 bg-white/5 border border-white/10 backdrop-blur-xl shadow-xl space-y-4">
+        <h4 class="text-white font-bold text-lg">📜 سجل النشر</h4>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm text-[#cbd5e1]">
+            <thead>
+              <tr class="text-right border-b border-white/10">
+                <th class="py-2 px-2">الحالة</th>
+                <th class="py-2 px-2">العنوان</th>
+                <th class="py-2 px-2">Video ID</th>
+                <th class="py-2 px-2">رابط</th>
+              </tr>
+            </thead>
+            <tbody id="history_table_body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <p id="download_hint" class="text-[#a59db8] text-sm mt-2 text-center">سيظهر الفيديو للمعاينة بعد اكتمال الإنشاء</p>
+
+      <div class="mt-8">
+        <div class="flex items-center justify-between px-4 pb-2 gap-3">
+          <h3 class="text-white text-lg font-bold">Log</h3>
+          <div id="run_state" class="text-xs text-[#a59db8]"></div>
+        </div>
+        <div id="log" class="text-slate-300 text-base p-4 min-h-[50px] rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xl shadow-xl whitespace-pre-line">
+
+          في انتظار البدء...
+        </div>
+      </div>
+    </div>
+
+    <footer class="mt-8 text-center">
+      <p class="text-sm text-[#cbd5e1]">تطوير وتنفيذ المهندس عبدالله فتحي السوالمة</p>
+    </footer>
+  </div>
+
+  <script>
+    const log  = document.getElementById("log");
+    const runState = document.getElementById("run_state");
+    const form = document.getElementById("form");
+    const durationSelect = document.getElementById("video_duration_sec");
+    const durationModeInfo = document.getElementById("duration_mode_info");
+    const downloadBtn = document.getElementById("download_btn");
+    const downloadHint = document.getElementById("download_hint");
+    const publishPanel = document.getElementById("publish_panel");
+    const previewPanel = document.getElementById("preview_panel");
+    const previewVideo = document.getElementById("preview_video");
+    if (previewVideo) previewVideo.playsInline = true;
+    const previewThumbnail = document.getElementById("preview_thumbnail");
+    const previewStatus = document.getElementById("preview_status");
+    const approvePublishBtn = document.getElementById("approve_publish_btn");
+    const approveStatus = document.getElementById("approve_status");
+    const publishTitle = document.getElementById("publish_title");
+    const publishDescription = document.getElementById("publish_description");
+    const publishTags = document.getElementById("publish_tags");
+    const publishHashtags = document.getElementById("publish_hashtags");
+    const addToQueueBtn = document.getElementById("add_to_queue_btn");
+    const queuePanel = document.getElementById("queue_panel");
+    const historyPanel = document.getElementById("history_panel");
+    const queueTableBody = document.getElementById("queue_table_body");
+    const historyTableBody = document.getElementById("history_table_body");
+    const youtubeConnectBtn = document.getElementById("youtube_connect_btn");
+    const youtubeDisconnectBtn = document.getElementById("youtube_disconnect_btn");
+    const refreshPlaylistsBtn = document.getElementById("refresh_playlists_btn");
+    const youtubePlaylist = document.getElementById("youtube_playlist");
+    const youtubePrivacy = document.getElementById("youtube_privacy");
+    const youtubeScheduleAt = document.getElementById("youtube_schedule_at");
+    const youtubeMadeForKids = document.getElementById("youtube_made_for_kids");
+
+    function statusLabel(status) {
+      const map = {
+        pending: "Pending",
+        scheduled: "Scheduled",
+        uploading: "Uploading",
+        uploaded: "Uploaded",
+        failed: "Failed",
+      };
+      return map[status] || status;
+    }
+
+    function getPublishFormData() {
+      const fd = new FormData();
+      fd.append("privacy", youtubePrivacy.value);
+      fd.append("category_id", "27");
+      fd.append("made_for_kids", youtubeMadeForKids.value);
+      if (youtubeScheduleAt.value) {
+        const dt = new Date(youtubeScheduleAt.value);
+        fd.append("scheduled_time", dt.toISOString());
+      }
+      const playlistId = youtubePlaylist.value;
+      fd.append("playlist_id", playlistId);
+      const selected = youtubePlaylist.options[youtubePlaylist.selectedIndex];
+      fd.append("playlist_name", selected ? selected.text.replace(" (غير مربوطة)", "") : "");
+      return fd;
+    }
+
+    async function refreshQueueTables() {
+      const res = await fetch("/publish/queue");
+      const data = await res.json();
+      queueTableBody.innerHTML = "";
+      historyTableBody.innerHTML = "";
+
+      const items = data.items || [];
+      if (items.length) queuePanel.classList.remove("hidden");
+      items.forEach((item) => {
+        const tr = document.createElement("tr");
+        tr.className = "border-b border-white/5";
+        tr.innerHTML = `
+          <td class="py-2 px-2">${statusLabel(item.status)}</td>
+          <td class="py-2 px-2">${item.title || "—"}</td>
+          <td class="py-2 px-2">${item.privacy || "—"}</td>
+          <td class="py-2 px-2">
+            <button type="button" data-upload-id="${item.id}"
+              class="text-emerald-300 hover:text-emerald-200 mr-2">رفع</button>
+            <button type="button" data-delete-id="${item.id}"
+              class="text-rose-300 hover:text-rose-200">حذف</button>
+          </td>`;
+        queueTableBody.appendChild(tr);
+      });
+
+      const history = data.history || [];
+      if (history.length) historyPanel.classList.remove("hidden");
+      history.forEach((item) => {
+        const tr = document.createElement("tr");
+        tr.className = "border-b border-white/5";
+        const link = item.watch_url
+          ? `<a href="${item.watch_url}" target="_blank" rel="noopener noreferrer" class="text-sky-300 hover:underline">Watch</a>`
+          : "—";
+        tr.innerHTML = `
+          <td class="py-2 px-2">${statusLabel(item.status)}</td>
+          <td class="py-2 px-2">${item.title || "—"}</td>
+          <td class="py-2 px-2">${item.youtube_video_id || "—"}</td>
+          <td class="py-2 px-2">${link}</td>`;
+        historyTableBody.appendChild(tr);
+      });
+
+      queueTableBody.querySelectorAll("[data-upload-id]").forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          await fetch(`/publish/queue/${btn.dataset.uploadId}/upload`, { method: "POST" });
+          log.innerText += "\n⬆️ بدء رفع الفيديو إلى YouTube...";
+        });
+      });
+      queueTableBody.querySelectorAll("[data-delete-id]").forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          await fetch(`/publish/queue/${btn.dataset.deleteId}`, { method: "DELETE" });
+          await refreshQueueTables();
+        });
+      });
+    }
+
+    async function refreshDurationMode() {
+      const seconds = parseInt(durationSelect.value, 10) || 300;
+      try {
+        const res = await fetch("/duration/info?video_duration_sec=" + seconds);
+        const data = await res.json();
+        const chapters = data.uses_chapters ? ` | ${data.chapter_count} فصول` : "";
+        durationModeInfo.innerText = `الوضع: ${data.label} (${data.description}) — ~${data.target_scenes} مشهد${chapters}`;
+      } catch (_) {}
+    }
+
+    durationSelect.addEventListener("change", refreshDurationMode);
+
+    function applyDurationToParams(params) {
+      const selected = parseInt(durationSelect.value, 10);
+      params.set("video_duration_sec", String(Math.max(60, Math.min(3600, selected || 300))));
+    }
+
+    async function refreshPublishState() {
+      try {
+        const res = await fetch("/publish/status");
+        const data = await res.json();
+        if (data.ready || data.metadata_ready) {
+          publishPanel.classList.remove("hidden");
+        }
+        if (data.ready) {
+          previewPanel.classList.remove("hidden");
+          downloadBtn.classList.remove("hidden");
+          approvePublishBtn.classList.remove("hidden");
+          downloadHint.innerText = "الملف جاهز: " + data.filename;
+          previewStatus.innerText = "راجع الفيديو والصورة المصغرة وبيانات النشر قبل الاعتماد";
+          if (data.preview_video_url) {
+            previewVideo.src = data.preview_video_url + "?t=" + Date.now();
+            previewVideo.classList.remove("hidden");
+          }
+          if (data.preview_thumbnail_url) {
+            previewThumbnail.src = data.preview_thumbnail_url + "?t=" + Date.now();
+            previewThumbnail.classList.remove("hidden");
+          }
+        }
+        if (data.metadata) {
+          if (data.metadata.title) publishTitle.value = data.metadata.title;
+          if (data.metadata.description) publishDescription.value = data.metadata.description;
+          if (Array.isArray(data.metadata.tags)) publishTags.value = data.metadata.tags.join(", ");
+          if (Array.isArray(data.metadata.hashtags)) publishHashtags.value = data.metadata.hashtags.join(", ");
+        }
+        if (data.approved) {
+          approveStatus.classList.remove("hidden");
+          approvePublishBtn.classList.add("hidden");
+          addToQueueBtn.classList.remove("hidden");
+        } else {
+          approveStatus.classList.add("hidden");
+          addToQueueBtn.classList.add("hidden");
+          if (data.ready) approvePublishBtn.classList.remove("hidden");
+        }
+        if (data.youtube_connected) {
+          youtubeConnectBtn.classList.add("hidden");
+          youtubeDisconnectBtn.classList.remove("hidden");
+          refreshPlaylistsBtn.classList.remove("hidden");
+        } else {
+          youtubeConnectBtn.classList.remove("hidden");
+          youtubeDisconnectBtn.classList.add("hidden");
+          refreshPlaylistsBtn.classList.add("hidden");
+        }
+        await refreshQueueTables();
+      } catch (_) {}
+    }
+
+    async function refreshDownloadState() {
+      await refreshPublishState();
+    }
+
+    // Live log (SSE)
+    const LOG_CLEAR_SENTINEL = "__LOG_CLEAR__";
+
+    function clearLogPanel(keepLine) {
+      log.innerText = keepLine ? String(keepLine) : "";
+      log.scrollTop = log.scrollHeight;
+    }
+
+    function appendLogLine(message) {
+      if (!message) return;
+      if (message === LOG_CLEAR_SENTINEL) {
+        clearLogPanel();
+        return;
+      }
+      if (log.innerText.trim().startsWith("في انتظار البدء")) log.innerText = "";
+      log.innerText += (log.innerText ? "\n" : "") + message;
+      log.scrollTop = log.scrollHeight;
+      if (
+        message.includes("اكتمل") ||
+        message.includes("تنزيل") ||
+        message.includes("المصغرة") ||
+        message.includes("النشر") ||
+        message.includes("الرفع") ||
+        message.includes("YouTube") ||
+        message.includes("حفظ الفيديو")
+      ) {
+        refreshPublishState();
+      }
+    }
+
+    function connectLogStream() {
+      const eventSource = new EventSource("/stream");
+      eventSource.onmessage = (e) => appendLogLine(e.data);
+      eventSource.onerror = () => {
+        eventSource.close();
+        setTimeout(connectLogStream, 2000);
+      };
+    }
+    connectLogStream();
+
+    async function refreshRunState() {
+      if (!runState) return;
+      try {
+        const res = await fetch("/generation/status");
+        const d = await res.json();
+        if (!res.ok || !d) return;
+        const wasRunning = runState.dataset.running === "1";
+        if (d.running) {
+          runState.dataset.running = "1";
+          const t = typeof d.elapsed_sec === "number" ? d.elapsed_sec : 0;
+          const mm = String(Math.floor(t / 60)).padStart(2, "0");
+          const ss = String(t % 60).padStart(2, "0");
+          const last = d.last_message || "";
+          const encoding = last.includes("تجميع") || last.includes("ترميز");
+          let extra = "";
+          if (typeof d.seconds_since_last_log === "number" && d.seconds_since_last_log > 30) {
+            extra = encoding
+              ? " | مرحلة الترميز (طبيعي — انتظر)"
+              : ` | لا تحديث منذ ${d.seconds_since_last_log}s`;
+          }
+          runState.innerText = `🟢 يعمل الآن | ${mm}:${ss}${extra}`;
+        } else {
+          runState.innerText = "⏸️ غير نشط";
+          if (wasRunning) refreshQualityGate();
+          runState.dataset.running = "0";
+        }
+      } catch (_) {}
+    }
+    setInterval(refreshRunState, 2000);
+    refreshRunState();
+
+    const qualityGateBox = document.getElementById("quality_gate_box");
+    const qualityGateSummary = document.getElementById("quality_gate_summary");
+    const qualityGateScenes = document.getElementById("quality_gate_scenes");
+    const refreshQualityGateBtn = document.getElementById("refresh_quality_gate_btn");
+
+    async function refreshQualityGate() {
+      if (!qualityGateBox) return;
+      try {
+        const res = await fetch("/scenes/quality-gate");
+        if (!res.ok) return;
+        const data = await res.json();
+        qualityGateBox.classList.remove("hidden");
+        if (qualityGateSummary) {
+          qualityGateSummary.innerText =
+            `${data.passed || 0}/${(data.scenes || []).length} مشهد مقبول — ${data.topic || ""}` +
+            (data.imagerouter_model ? ` | 🎨 ${data.imagerouter_model}` : "");
+        }
+        if (qualityGateScenes) {
+          qualityGateScenes.innerHTML = "";
+          (data.scenes || []).forEach((scene) => {
+            const card = document.createElement("div");
+            card.className = "rounded-lg border border-white/10 bg-black/30 p-2 text-xs";
+            const ok = scene.ok;
+            const img = scene.path
+              ? `<img src="/scene-media/${encodeURIComponent(scene.path)}" alt="" class="w-full h-20 object-cover rounded mb-1" />`
+              : "";
+            card.innerHTML = `
+              ${img}
+              <p class="${ok ? "text-emerald-300" : "text-red-300"} font-bold">
+                مشهد ${scene.index} ${ok ? "✓" : "✗"}
+              </p>
+              <p class="text-slate-400">relevance: ${scene.story_relevance ?? scene.relevance_score ?? "—"}</p>
+              <p class="text-slate-400">visual: ${scene.visual_quality ?? "—"} | text: ${scene.text_artifacts ?? "—"}</p>
+              <p class="text-slate-500">${scene.fail_reason || scene.quality_gate || ""}</p>`;
+            qualityGateScenes.appendChild(card);
+          });
+        }
+      } catch (_) {}
+    }
+
+    if (refreshQualityGateBtn) {
+      refreshQualityGateBtn.addEventListener("click", refreshQualityGate);
+    }
+
+    // Helpers: color sync + toggle sections
+    function setupColorSync(textInputId, colorPickerId){
+      const t = document.getElementById(textInputId);
+      const c = document.getElementById(colorPickerId);
+      const preview = c?.nextElementSibling;
+      function update(v){
+        const val = v.toUpperCase();
+        if(/^#[0-9A-F]{6}$/i.test(val)){
+          t.value = val; if(c) c.value = val; if(preview) preview.style.backgroundColor = val;
+        }
+      }
+      if(c) c.addEventListener("input", e => update(e.target.value));
+      if(t) t.addEventListener("input", e => update(e.target.value));
+      if(t) update(t.value);
+    }
+    setupColorSync("fontcolor_text","fontcolor_picker");
+    setupColorSync("stroke_color_text","stroke_color_picker");
+    setupColorSync("bgcolor_text","bgcolor_picker");
+
+    function setupToggle(selectId, sectionId){
+      const sel = document.getElementById(selectId);
+      const sec = document.getElementById(sectionId);
+      function toggle(){ sec.style.display = (sel.value === "true") ? "block" : "none"; }
+      sel.addEventListener("change", toggle); toggle();
+    }
+    setupToggle("caption_enabled","caption_settings");
+    setupToggle("bgcolor_enabled","bgcolor_settings");
+
+    const scriptSource = document.getElementById("script_source");
+    const contentProfileSelect = document.getElementById("content_profile");
+    const researchTopicBtn = document.getElementById("research_topic_btn");
+    const researchPreviewBox = document.getElementById("research_preview_box");
+    const researchSummaryEl = document.getElementById("research_summary");
+    const researchSourcesEl = document.getElementById("research_sources");
+    const researchEventsEl = document.getElementById("research_events");
+    const researchScenesInfoEl = document.getElementById("research_scenes_info");
+    const researchEngineBadge = document.getElementById("research_engine_badge");
+    const researchSessionInfoEl = document.getElementById("research_session_info");
+
+    function updateResearchEngineBadge(data) {
+      if (!researchEngineBadge) return;
+      const source = data.research_source || data.source || (data.research && data.research.source) || "";
+      const label = data.research_engine_label
+        || (String(source).toLowerCase().includes("gemini") ? "🟢 Gemini Research" : "🟡 Local Story Engine");
+      const isGemini = label.includes("Gemini");
+      researchEngineBadge.classList.remove("hidden");
+      researchEngineBadge.innerText = label;
+      researchEngineBadge.className = `text-xs font-bold px-3 py-1 rounded-full border ${
+        isGemini
+          ? "text-emerald-300 border-emerald-500/50 bg-emerald-950/40"
+          : "text-amber-300 border-amber-500/50 bg-amber-950/40"
+      }`;
+      if (researchSessionInfoEl) {
+        const sid = data.session_id || "";
+        if (sid) {
+          researchSessionInfoEl.classList.remove("hidden");
+          researchSessionInfoEl.innerText = `session_id: ${sid}`;
+        }
+      }
+    }
+
+    function showResearchResult(data, scenes) {
+      if (researchPreviewBox) researchPreviewBox.classList.remove("hidden");
+      updateResearchEngineBadge(data);
+      const ref = (data.research && data.research.story_reference) || data.story_reference || null;
+      if (researchSummaryEl) {
+        researchSummaryEl.innerText = (data.research && data.research.research_summary) || ref?.title || "تم تحضير المشاهد.";
+      }
+      if (researchSourcesEl) {
+        researchSourcesEl.innerText = ref?.sources?.length
+          ? "المصادر: " + ref.sources.join(" | ")
+          : "";
+      }
+      if (researchEventsEl) {
+        researchEventsEl.innerText = ref?.key_events?.length
+          ? "الأحداث: " + ref.key_events.join(" → ")
+          : "";
+      }
+      if (researchScenesInfoEl) {
+        const presentations = (scenes || []).map((s) => s.presentation || s.media_source || s.media_type).join(", ");
+        researchScenesInfoEl.innerText = `${(scenes || []).length} مشهد | تنويع: ${presentations}`;
+      }
+    }
+    const customScriptBox = document.getElementById("custom_script_box");
+    const scenesScriptBox = document.getElementById("scenes_script_box");
+    const customScenesScriptEl = document.getElementById("custom_scenes_script");
+    const parseScriptBtn = document.getElementById("parse_script_btn");
+    const exportScriptBtn = document.getElementById("export_script_btn");
+    const scenesBox = document.getElementById("scenes_box");
+    const scenesList = document.getElementById("scenes_list");
+    const customScenesInput = document.getElementById("custom_scenes_input");
+    const addSceneBtn = document.getElementById("add_scene");
+
+    const autoGenerateScenesBtn = document.getElementById("auto_generate_scenes");
+    const topicInput = document.querySelector('input[name="topic"]');
+    const topicScriptWarning = document.getElementById("topic_script_warning");
+
+    function updateTopicScriptWarning() {
+      if (!topicScriptWarning || !topicInput) return;
+      const topic = (topicInput.value || "").trim().toLowerCase();
+      const script = (customScenesScriptEl?.value || customScenesInput?.value || "").toLowerCase();
+      if (!topic || !script) {
+        topicScriptWarning.classList.add("hidden");
+        return;
+      }
+      const islamic = /يوسف|كهف|إسلام|قصة|سيدنا|القرآن|الانبياء|الأنبياء/.test(topic);
+      const tech = /flutter|تثبيت|download|installer|python|برمجة|software|tutorial/.test(script);
+      if (islamic && tech) {
+        topicScriptWarning.textContent =
+          "⚠️ الموضوع يبدو إسلامياً لكن السيناريو المحفوظ تقنياً — اضغط «بحث وتحضير الموضوع» أو «توليد المشاهد» قبل الإنشاء";
+        topicScriptWarning.classList.remove("hidden");
+      } else {
+        topicScriptWarning.classList.add("hidden");
+      }
+    }
+
+    if (topicInput) topicInput.addEventListener("input", updateTopicScriptWarning);
+    if (customScenesScriptEl) customScenesScriptEl.addEventListener("input", updateTopicScriptWarning);
+    const mediaSourceSelect = document.querySelector('select[name="media_source"]');
+
+    function formatDurationSec(value) {
+      const n = Number(value);
+      if (!Number.isFinite(n)) return 6;
+      return Math.round(n * 10) / 10;
+    }
+
+    function defaultScene() {
+      return {
+        narration: "",
+        visual: "",
+        characters: "",
+        method: "",
+        voice_style: "",
+        duration_sec: 6,
+        media_type: "pexels",
+        screen_text: "",
+        local_file: ""
+      };
+    }
+
+    let scenes = [];
+    try {
+      scenes = JSON.parse(document.getElementById("custom_scenes_data").textContent || "[]");
+      if (!Array.isArray(scenes)) scenes = [];
+    } catch (_) {
+      scenes = [];
+    }
+    scenes = scenes.map((scene) => ({ ...defaultScene(), ...scene }));
+    if (!scenes.length) {
+      scenes = [defaultScene(), defaultScene(), defaultScene()];
+    }
+
+    function syncScenesInput() {
+      customScenesInput.value = JSON.stringify(scenes);
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    function renderScenes() {
+      scenesList.innerHTML = "";
+      scenes.forEach((scene, index) => {
+        const mediaType = scene.media_type || "pexels";
+        const card = document.createElement("div");
+        card.className = "rounded-xl p-3 bg-[#2d2938]/60 border border-white/10 space-y-2";
+        card.innerHTML = `
+          <div class="flex items-center justify-between">
+            <span class="text-white font-bold text-sm">مشهد ${index + 1}</span>
+            <button type="button" data-remove="${index}" class="text-rose-300 hover:text-rose-200 text-sm">حذف</button>
+          </div>
+          <div>
+            <label class="block text-[#cbd5e1] text-xs font-bold mb-1">ما يُقال (التعليق الصوتي)</label>
+            <textarea data-field="narration" data-index="${index}" rows="2"
+              class="form-textarea w-full rounded-xl text-white bg-[#0f172a] p-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400/40"
+              placeholder="مثال: أولاً افتح موقع flutter.dev">${escapeHtml(scene.narration)}</textarea>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
+            <div>
+              <label class="block text-[#cbd5e1] text-xs font-bold mb-1">الشخصيات</label>
+              <input data-field="characters" data-index="${index}" type="text"
+                class="form-input w-full rounded-xl text-white bg-[#0f172a] h-11 p-3 text-sm focus:outline-none focus:ring-2 focus:ring-pink-400/40"
+                placeholder="راوٍ / معلم / لا شخصيات"
+                value="${escapeHtml(scene.characters)}" />
+            </div>
+            <div>
+              <label class="block text-[#cbd5e1] text-xs font-bold mb-1">الطريقة</label>
+              <input data-field="method" data-index="${index}" type="text"
+                class="form-input w-full rounded-xl text-white bg-[#0f172a] h-11 p-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400/40"
+                placeholder="شرح على شاشة / رسوم / لقطة برنامج"
+                value="${escapeHtml(scene.method)}" />
+            </div>
+            <div>
+              <label class="block text-[#cbd5e1] text-xs font-bold mb-1">نمط الصوت</label>
+              <input data-field="voice_style" data-index="${index}" type="text"
+                class="form-input w-full rounded-xl text-white bg-[#0f172a] h-11 p-3 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400/40"
+                placeholder="هادئ / حماسي / storyteller"
+                value="${escapeHtml(scene.voice_style)}" />
+            </div>
+          </div>
+          <div>
+            <label class="block text-[#cbd5e1] text-xs font-bold mb-1">Prompt بصري (للبحث أو توليد الصورة)</label>
+            <textarea data-field="visual" data-index="${index}" rows="2"
+              class="form-textarea w-full rounded-xl text-white bg-[#0f172a] p-3 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-400/40"
+              placeholder="modern programmer using laptop, dark office, coding Flutter application">${escapeHtml(scene.visual)}</textarea>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
+            <div>
+              <label class="block text-[#cbd5e1] text-xs font-bold mb-1">نص الشاشة</label>
+              <input data-field="screen_text" data-index="${index}" type="text"
+                class="form-input w-full rounded-xl text-white bg-[#0f172a] h-11 p-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400/40"
+                placeholder="Flutter Official Website"
+                value="${escapeHtml(scene.screen_text)}" />
+            </div>
+            <div>
+              <label class="block text-[#cbd5e1] text-xs font-bold mb-1">مدة المشهد (ث)</label>
+              <input data-field="duration_sec" data-index="${index}" type="number" min="0" max="120" step="0.1"
+                inputmode="decimal"
+                class="form-input w-full rounded-xl text-white bg-[#0f172a] h-11 p-3 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-400/40"
+                placeholder="6"
+                value="${escapeHtml(formatDurationSec(scene.duration_sec ?? 6))}" />
+            </div>
+            <div>
+              <label class="block text-[#cbd5e1] text-xs font-bold mb-1">نوع الوسائط</label>
+              <select data-select="media_type" data-index="${index}"
+                class="form-select w-full rounded-xl text-white bg-[#0f172a] h-11 p-3 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400/40">
+                <option value="pexels" ${mediaType === "pexels" ? "selected" : ""}>Pexels (40%)</option>
+                <option value="ai" ${mediaType === "ai" ? "selected" : ""}>صورة AI (30%)</option>
+                <option value="slide" ${mediaType === "slide" ? "selected" : ""}>شريحة نصية (20%)</option>
+                <option value="screen" ${mediaType === "screen" ? "selected" : ""}>Screen Recording (10%)</option>
+                <option value="local" ${mediaType === "local" ? "selected" : ""}>ملف محلي</option>
+              </select>
+            </div>
+          </div>
+          <div data-local-box="${index}" class="${(mediaType === "local" || mediaType === "screen") ? "" : "hidden"} space-y-2">
+            <label class="block text-[#cbd5e1] text-xs font-bold">${mediaType === "screen" ? "لقطة شاشة / PDF / PowerPoint" : "ملف محلي (صورة أو فيديو)"}</label>
+            <div class="flex flex-wrap items-center gap-2">
+              <input data-upload="${index}" type="file" accept="image/*,video/*,.pdf,.ppt,.pptx"
+                class="text-[#cbd5e1] text-xs file:mr-3 file:rounded-lg file:border-0 file:bg-sky-700 file:px-3 file:py-2 file:text-white" />
+              <span data-local-name="${index}" class="text-emerald-300 text-xs">${escapeHtml(scene.local_file || "لم يُرفع ملف بعد")}</span>
+            </div>
+          </div>
+        `;
+        scenesList.appendChild(card);
+      });
+
+      scenesList.querySelectorAll("[data-field]").forEach((el) => {
+        el.addEventListener("input", (e) => {
+          const idx = Number(e.target.dataset.index);
+          const field = e.target.dataset.field;
+          let value = e.target.value;
+          if (field === "duration_sec") {
+            value = parseFloat(value);
+            if (!Number.isFinite(value)) value = 0;
+            value = formatDurationSec(Math.max(0, Math.min(120, value)));
+          }
+          scenes[idx][field] = value;
+          syncScenesInput();
+        });
+      });
+
+      scenesList.querySelectorAll("[data-select]").forEach((el) => {
+        el.addEventListener("change", (e) => {
+          const idx = Number(e.target.dataset.index);
+          scenes[idx].media_type = e.target.value;
+          syncScenesInput();
+          renderScenes();
+        });
+      });
+
+      scenesList.querySelectorAll("[data-upload]").forEach((input) => {
+        input.addEventListener("change", async (e) => {
+          const idx = Number(e.target.dataset.upload);
+          const file = e.target.files && e.target.files[0];
+          if (!file) return;
+          const fd = new FormData();
+          fd.append("file", file);
+          const res = await fetch("/upload/scene", { method: "POST", body: fd });
+          const data = await res.json();
+          if (!res.ok) {
+            alert(data.detail || "فشل رفع الملف");
+            return;
+          }
+          scenes[idx].local_file = data.local_file || data.filename;
+          if (scenes[idx].media_type !== "local") {
+            scenes[idx].media_type = scenes[idx].media_type === "screen" ? "screen" : "local";
+          }
+          syncScenesInput();
+          renderScenes();
+        });
+      });
+
+      scenesList.querySelectorAll("[data-remove]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const idx = Number(btn.dataset.remove);
+          if (scenes.length <= 1) return;
+          scenes.splice(idx, 1);
+          syncScenesInput();
+          renderScenes();
+        });
+      });
+    }
+
+    function scenesToScriptText(items) {
+      const chunks = [];
+      items.forEach((scene, idx) => {
+        const lines = [`--- مشهد ${idx + 1} ---`];
+        if (scene.narration) lines.push(`الصوت: ${scene.narration}`);
+        if (scene.characters) lines.push(`الشخصيات: ${scene.characters}`);
+        if (scene.method) lines.push(`الطريقة: ${scene.method}`);
+        if (scene.voice_style) lines.push(`نمط الصوت: ${scene.voice_style}`);
+        if (scene.visual) lines.push(`Prompt بصري: ${scene.visual}`);
+        if (scene.screen_text) lines.push(`نص الشاشة: ${scene.screen_text}`);
+        if (scene.duration_sec) lines.push(`المدة: ${scene.duration_sec}`);
+        if (scene.media_type) lines.push(`نوع الوسائط: ${scene.media_type}`);
+        if (scene.local_file) lines.push(`ملف: ${scene.local_file}`);
+        chunks.push(lines.join("\n"));
+      });
+      return chunks.join("\n\n");
+    }
+
+    function formatApiDetail(detail) {
+      if (!detail) return "خطأ غير معروف";
+      if (typeof detail === "string") {
+        if (detail === "Not Found") {
+          return "المسار غير موجود على السيرفر — أغلق النافذة القديمة ثم شغّل start_server.bat من جديد";
+        }
+        return detail;
+      }
+      if (Array.isArray(detail)) {
+        return detail.map((item) => item.msg || item.message || JSON.stringify(item)).join("\n");
+      }
+      return String(detail);
+    }
+
+    async function readJsonResponse(res) {
+      const text = await res.text();
+      if (!text) return {};
+      try {
+        return JSON.parse(text);
+      } catch (_) {
+        throw new Error("استجابة غير صالحة من السيرفر — تأكد أن start_server.bat يعمل");
+      }
+    }
+
+    function scrollToScenesBox() {
+      if (!scenesBox) return;
+      scenesBox.scrollIntoView({ behavior: "smooth", block: "start" });
+      scenesBox.classList.add("ring-2", "ring-emerald-400/60");
+      setTimeout(() => scenesBox.classList.remove("ring-2", "ring-emerald-400/60"), 1800);
+    }
+
+    exportScriptBtn?.addEventListener("click", () => {
+      syncScenesInput();
+      customScenesScriptEl.value = scenesToScriptText(scenes);
+      appendLogLine("📤 تم تصدير المشاهد إلى السيناريو النصي — راجع النص ثم أنشئ الفيديو");
+    });
+
+    parseScriptBtn?.addEventListener("click", async () => {
+      const scriptText = (customScenesScriptEl.value || "").trim();
+      if (!scriptText) {
+        alert("الصق السيناريو النصي أولاً");
+        customScenesScriptEl.focus();
+        return;
+      }
+      parseScriptBtn.disabled = true;
+      const defaultLabel = parseScriptBtn.innerText;
+      parseScriptBtn.innerText = "جاري التحليل...";
+      try {
+        const fd = new FormData();
+        fd.append("scenes_script", scriptText);
+        const res = await fetch("/scenes/parse_script", { method: "POST", body: fd });
+        const data = await readJsonResponse(res);
+        if (!res.ok) {
+          alert(formatApiDetail(data.detail) || "فشل تحليل السيناريو");
+          return;
+        }
+        scenes = (data.scenes || []).map((scene) => ({ ...defaultScene(), ...scene }));
+        if (!scenes.length) {
+          alert("لم يُستخرج أي مشهد — تأكد من صيغة --- مشهد 1 --- والحقول");
+          return;
+        }
+        syncScenesInput();
+        renderScenes();
+        scrollToScenesBox();
+        appendLogLine(`✅ تم تحليل ${scenes.length} مشهدًا — راجع البطاقات أدناه`);
+      } catch (err) {
+        alert(
+          "تعذر الاتصال بالسيرفر.\n\n" +
+          "1) شغّل start_server.bat\n" +
+          "2) اترك النافذة مفتوحة\n" +
+          "3) حدّث الصفحة (Ctrl+F5)\n\n" +
+          (err?.message || err)
+        );
+      } finally {
+        parseScriptBtn.disabled = false;
+        parseScriptBtn.innerText = defaultLabel;
+      }
+    });
+
+    addSceneBtn.addEventListener("click", () => {
+      scenes.push(defaultScene());
+      syncScenesInput();
+      renderScenes();
+    });
+
+    autoGenerateScenesBtn.addEventListener("click", async () => {
+      const topic = (topicInput.value || "").trim();
+      if (!topic) {
+        alert("أدخل موضوع الفيديو أولاً");
+        topicInput.focus();
+        return;
+      }
+      autoGenerateScenesBtn.disabled = true;
+      autoGenerateScenesBtn.innerText = "جاري التوليد...";
+      clearLogPanel("✨ جاري توليد المشاهد...");
+      try {
+        const fd = new FormData();
+        fd.append("topic", topic);
+        applyDurationToFormData(fd);
+        fd.append("media_source", mediaSourceSelect ? mediaSourceSelect.value : "images");
+        if (contentProfileSelect) fd.append("content_profile", contentProfileSelect.value);
+        const res = await fetch("/scenes/auto_generate", { method: "POST", body: fd });
+        const data = await readJsonResponse(res);
+        if (!res.ok) {
+          alert(formatApiDetail(data.detail) || "فشل توليد المشاهد");
+          return;
+        }
+        scenes = (data.scenes || []).map((scene) => ({ ...defaultScene(), ...scene }));
+        if (!scenes.length) {
+          alert("لم يتم توليد مشاهد — حاول مرة أخرى");
+          return;
+        }
+        customScenesScriptEl.value = data.script_text || scenesToScriptText(scenes);
+        scriptSource.value = "scenes_script";
+        toggleScriptPanels();
+        syncScenesInput();
+        renderScenes();
+        showResearchResult(data, scenes);
+        updateResearchEngineBadge(data);
+        if (data.source && data.source.includes("local")) {
+          alert("⚠️ تم استخدام توليد محلي (Gemini غير متاح). راجع السيناريو وعدّل الشخصيات والطريقة والصوت يدوياً قبل الإنشاء.");
+          log.innerText = `⚠️ ${data.research_engine_label || "توليد محلي"} — ${scenes.length} مشهدًا. عدّل السيناريو النصي للدقة ثم أنشئ الفيديو`;
+        } else {
+          log.innerText = `✅ ${data.research_engine_label || "Gemini Research"} — ${scenes.length} مشهدًا. راجع السيناريو ثم أنشئ الفيديو`;
+        }
+      } finally {
+        autoGenerateScenesBtn.disabled = false;
+        autoGenerateScenesBtn.innerText = "✨ توليد المشاهد تلقائياً من النص";
+      }
+    });
+
+    if (researchTopicBtn) {
+      researchTopicBtn.addEventListener("click", async () => {
+        const topic = (topicInput.value || "").trim();
+        if (!topic) {
+          alert("أدخل موضوع الفيديو أولاً");
+          topicInput.focus();
+          return;
+        }
+        researchTopicBtn.disabled = true;
+        researchTopicBtn.innerText = "جاري البحث...";
+        clearLogPanel("🔎 جاري البحث وتحضير الموضوع...");
+        try {
+          const fd = new FormData();
+          fd.append("topic", topic);
+          applyDurationToFormData(fd);
+          fd.append("media_source", mediaSourceSelect ? mediaSourceSelect.value : "images");
+          if (contentProfileSelect) fd.append("content_profile", contentProfileSelect.value);
+          const res = await fetch("/research/topic", { method: "POST", body: fd });
+          const data = await readJsonResponse(res);
+          if (!res.ok) {
+            alert(formatApiDetail(data.detail) || "فشل البحث");
+            return;
+          }
+          scenes = (data.scenes || []).map((scene) => ({ ...defaultScene(), ...scene }));
+          customScenesScriptEl.value = scenesToScriptText(scenes);
+          scriptSource.value = "scenes_script";
+          toggleScriptPanels();
+          syncScenesInput();
+          renderScenes();
+          showResearchResult(data, scenes);
+          updateResearchEngineBadge(data);
+          log.innerText = `🔎 ${data.research_engine_label || "بحث"} — ${scenes.length} مشهد | session=${data.session_id || "—"}`;
+        } finally {
+          researchTopicBtn.disabled = false;
+          researchTopicBtn.innerText = "بحث وتحضير الموضوع";
+        }
+      });
+    }
+
+    function toggleScriptPanels(){
+      const mode = scriptSource.value;
+      scenesScriptBox.style.display = (mode === "scenes_script") ? "block" : "none";
+      scenesBox.style.display = "block";
+      customScriptBox.style.display = (mode === "manual") ? "block" : "none";
+
+      const hint = document.getElementById("scenes_mode_hint");
+      if (!hint) return;
+      if (mode === "scenes" || mode === "scenes_script") {
+        hint.classList.add("hidden");
+        hint.innerText = "";
+      } else {
+        hint.classList.remove("hidden");
+        hint.innerText =
+          "⚠️ الوضع الحالي («" +
+          (scriptSource.options[scriptSource.selectedIndex]?.text || mode) +
+          "») لا يستخدم بطاقات المشاهd عند الإنشاء. غيّر المصدر إلى «مشاهd يدوية» أو «سيناريo نصي كامل» لاستخدام ما تراه هنا.";
+      }
+    }
+    scriptSource.addEventListener("change", toggleScriptPanels);
+    toggleScriptPanels();
+    updateTopicScriptWarning();
+    if (researchPreviewBox) researchPreviewBox.classList.remove("hidden");
+    renderScenes();
+    syncScenesInput();
+
+    // Refresh info panes
+    async function refreshTopicsInfo(){
+      const res = await fetch("/topics_info");
+      const d = await res.json();
+      const el = document.getElementById("topics_stats");
+      el.children[0].innerText = "المتبقي: " + d.count;
+      el.children[1].innerText = " | القادم: " + (d.next ?? "—");
+    }
+    async function refreshYT(){
+      const r = await fetch("/youtube/status");
+      const d = await r.json();
+      const s = d.authorized ? "✅ مربوط" : "⛔️ غير مربوط";
+      document.getElementById("yt_status").innerText = `حالة الربط: ${s} | في القائمة: ${d.queue_count || 0}`;
+      if (d.authorized) {
+        youtubeConnectBtn.classList.add("hidden");
+        youtubeDisconnectBtn.classList.remove("hidden");
+        refreshPlaylistsBtn.classList.remove("hidden");
+      }
+    }
+
+    async function refreshPlaylists() {
+      const res = await fetch("/youtube/playlists/refresh", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) return;
+      const current = youtubePlaylist.value;
+      youtubePlaylist.innerHTML = '<option value="">— بدون قائمة —</option>';
+      (data.playlists || []).forEach((p) => {
+        const opt = document.createElement("option");
+        opt.value = p.id || "";
+        opt.textContent = p.name + (p.id ? "" : " (غير مربوطة)");
+        if (p.id && p.id === current) opt.selected = true;
+        youtubePlaylist.appendChild(opt);
+      });
+    }
+
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get("youtube") === "connected") {
+      log.innerText = "✅ تم ربط YouTube بنجاح";
+    }
+    if (urlParams.get("youtube_error")) {
+      log.innerText = "❌ فشل ربط YouTube: " + urlParams.get("youtube_error");
+    }
+    refreshTopicsInfo(); refreshYT(); refreshPublishState(); refreshDurationMode();
+
+    document.getElementById("save_channel_template").onclick = async () => {
+      const fd = new FormData();
+      fd.append("channel_name", document.getElementById("channel_name").value);
+      fd.append("default_description", document.getElementById("channel_default_description").value);
+      fd.append("default_tags", document.getElementById("channel_default_tags").value);
+      fd.append("watermark_text", document.getElementById("channel_watermark_text").value);
+      fd.append("title_prefix", document.getElementById("title_prefix").value);
+      fd.append("title_suffix", document.getElementById("title_suffix").value);
+      await fetch("/channel/template", { method: "POST", body: fd });
+      log.innerText += "\n✅ تم حفظ قالب القناة";
+    };
+
+    document.getElementById("save_metadata_btn").onclick = async () => {
+      const fd = new FormData();
+      fd.append("title", publishTitle.value);
+      fd.append("description", publishDescription.value);
+      fd.append("tags", publishTags.value);
+      fd.append("hashtags", publishHashtags.value);
+      await fetch("/publish/metadata", { method: "POST", body: fd });
+      log.innerText += "\n✅ تم حفظ بيانات النشر";
+      approveStatus.classList.add("hidden");
+      approvePublishBtn.classList.remove("hidden");
+    };
+
+    document.getElementById("generate_metadata_btn").onclick = async () => {
+      const topic = (document.querySelector('input[name="topic"]').value || "").trim();
+      if (!topic) {
+        alert("أدخل موضوع الفيديو أولاً");
+        return;
+      }
+      const fd = new FormData();
+      fd.append("topic", topic);
+      const res = await fetch("/publish/metadata/generate", { method: "POST", body: fd });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.detail || "فشل توليد البيانات");
+        return;
+      }
+      await refreshPublishState();
+      log.innerText += "\n✅ تم توليد بيانات YouTube";
+    };
+
+    document.getElementById("regenerate_thumbnail_btn").onclick = async () => {
+      const fd = new FormData();
+      fd.append("topic", document.querySelector('input[name="topic"]').value || "");
+      fd.append("title", publishTitle.value || "");
+      await fetch("/thumbnail/generate", { method: "POST", body: fd });
+      await refreshPublishState();
+    };
+
+    document.getElementById("upload_thumbnail_input").onchange = async (e) => {
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+      const fd = new FormData();
+      fd.append("file", file);
+      await fetch("/thumbnail/upload", { method: "POST", body: fd });
+      await refreshPublishState();
+    };
+
+    approvePublishBtn.onclick = async () => {
+      const res = await fetch("/publish/approve", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.detail || "تعذر الاعتماد");
+        return;
+      }
+      await refreshPublishState();
+      log.innerText += "\n✅ تم الاعتماد — أضف الفيديو إلى قائمة النشر";
+    };
+
+    addToQueueBtn.onclick = async () => {
+      const fd = getPublishFormData();
+      const res = await fetch("/publish/queue/add", { method: "POST", body: fd });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.detail || "تعذر الإضافة إلى قائمة النشر");
+        return;
+      }
+      await refreshPublishState();
+      log.innerText += "\n📥 تمت الإضافة إلى قائمة النشر";
+    };
+
+    document.getElementById("process_queue_btn").onclick = async () => {
+      const res = await fetch("/publish/queue/process", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.detail || "تعذر بدء الرفع");
+        return;
+      }
+      log.innerText += "\n⬆️ بدء رفع الفيديو من قائمة النشر...";
+    };
+
+    youtubeDisconnectBtn.onclick = async () => {
+      await fetch("/youtube/disconnect", { method: "POST" });
+      await refreshYT();
+      await refreshPublishState();
+      log.innerText += "\n⛔️ تم فصل حساب YouTube";
+    };
+
+    refreshPlaylistsBtn.onclick = refreshPlaylists;
+
+    function appendIslamicOptions(fd) {
+      const quran = document.getElementById("include_quran");
+      const hadith = document.getElementById("include_hadith");
+      const accuracy = document.getElementById("historical_accuracy");
+      const cache = document.getElementById("scene_cache_enabled");
+      const fresh = document.getElementById("force_fresh_media");
+      const hook = document.getElementById("hook_scene");
+      const cliff = document.getElementById("cliffhanger");
+      const lesson = document.getElementById("lesson_summary");
+      if (quran) fd.set("include_quran", quran.checked ? "true" : "false");
+      if (hadith) fd.set("include_hadith", hadith.checked ? "true" : "false");
+      if (accuracy) fd.set("historical_accuracy", accuracy.checked ? "true" : "false");
+      if (cache) fd.set("scene_cache_enabled", cache.checked ? "true" : "false");
+      if (fresh) fd.set("force_fresh_media", fresh.checked ? "true" : "false");
+      if (hook) fd.set("hook_scene", hook.checked ? "true" : "false");
+      if (cliff) fd.set("cliffhanger", cliff.checked ? "true" : "false");
+      if (lesson) fd.set("lesson_summary", lesson.checked ? "true" : "false");
+    }
+
+    // ---- Save current settings (unified & fixed) ----
+    async function saveCurrentSettings() {
+      const fd = new FormData(form);
+      appendIslamicOptions(fd);
+      // add YouTube fields (outside the form)
+      fd.append("upload_enabled", document.getElementById("upload_enabled").value);
+      fd.append("youtube_privacy", document.querySelector('select[name="youtube_privacy"]').value);
+      applyDurationToFormData(fd);
+      syncScenesInput();
+      fd.set("custom_scenes", customScenesInput.value);
+      if (customScenesScriptEl) {
+        fd.set("custom_scenes_script", customScenesScriptEl.value || "");
+      }
+      const params = new URLSearchParams(fd);
+      await fetch("/save_settings?" + params);
+    }
+
+    function applyDurationToFormData(fd) {
+      const selected = parseInt(durationSelect.value, 10);
+      fd.set("video_duration_sec", String(Math.max(60, Math.min(3600, selected || 300))));
+    }
+
+    // Manual submit
+    form.onsubmit = async (e) => {
+      e.preventDefault();
+      const fd = new FormData(form);
+      appendIslamicOptions(fd);
+      fd.append("upload_enabled", document.getElementById("upload_enabled").value);
+      fd.append("youtube_privacy", document.querySelector('select[name="youtube_privacy"]').value);
+      applyDurationToFormData(fd);
+      syncScenesInput();
+      fd.set("custom_scenes", customScenesInput.value);
+      if (customScenesScriptEl) {
+        fd.set("custom_scenes_script", customScenesScriptEl.value || "");
+      }
+      downloadBtn.classList.add("hidden");
+      downloadHint.innerText = "جاري إنشاء الفيديو...";
+      clearLogPanel();
+      await fetch("/generate", { method: "POST", body: fd });
+    };
+
+    // From list
+    document.getElementById("run_from_list").onclick = async () => {
+      await saveCurrentSettings();
+      const r = await fetch("/generate_from_list");
+      if (r.ok) refreshTopicsInfo();
+    };
+    document.getElementById("run_from_list_and_upload").onclick = async () => {
+      document.getElementById("upload_enabled").value = "false";
+      await saveCurrentSettings();
+      const r = await fetch("/generate_from_list");
+      if (r.ok) refreshTopicsInfo();
+    };
+  </script>
+</body>
+</html>

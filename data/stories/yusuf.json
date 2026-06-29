@@ -1,0 +1,107 @@
+{
+  "title": "قصة يوسف عليه السلام",
+  "topic_keywords": ["قصة يوسف", "يوسف", "yusuf", "prophet yusuf", "سيدنا يوسف"],
+  "scenes": [
+    {
+      "event": "رؤيا يوسف",
+      "narration": "في ليلة هادئة، رأى الغلام الصغير يوسف رؤيا عجيبة، أحد عشر كوكباً والشمس والقمر يسجدون له.",
+      "visual_requirements": [
+        "ancient desert well at night",
+        "starry night sky",
+        "eleven bright stars",
+        "young boy silhouette looking at sky",
+        "cinematic Islamic historical illustration",
+        "no faces"
+      ]
+    },
+    {
+      "event": "إلقاؤه في البئر",
+      "narration": "دبر إخوته مكيدة، وألقوه في غيابة الجُب، وتركوه وحيداً في ظلام البئر.",
+      "visual_requirements": [
+        "deep dark desert well",
+        "rope descending into well",
+        "brothers silhouettes looking down",
+        "harsh desert sun",
+        "cinematic Islamic historical illustration",
+        "no faces"
+      ]
+    },
+    {
+      "event": "قافلة السيارة",
+      "narration": "مرت قافلة مسافرة، فأرسلوا واردهم، فأدلى دلوه.. وقال يا بشرى، هذا غلام!",
+      "visual_requirements": [
+        "ancient merchant caravan",
+        "camels in desert distance",
+        "man pulling bucket from well",
+        "cinematic Islamic historical illustration",
+        "no faces"
+      ]
+    },
+    {
+      "event": "قصر العزيز",
+      "narration": "بيع يوسف في مصر بثمن بخس، واشتراه عزيز مصر، وأكرم مثواه في قصره.",
+      "visual_requirements": [
+        "ancient Egyptian palace interior",
+        "grand pillars",
+        "luxurious fabrics",
+        "cinematic Islamic historical illustration",
+        "no faces"
+      ]
+    },
+    {
+      "event": "السجن",
+      "narration": "فضل يوسف السجن على المعصية، فلبث في السجن بضع سنين.",
+      "visual_requirements": [
+        "ancient stone dungeon",
+        "dim lighting through small window",
+        "shadows on wall",
+        "cinematic Islamic historical illustration",
+        "no faces"
+      ]
+    },
+    {
+      "event": "رؤيا الملك",
+      "narration": "رأى ملك مصر رؤيا حيرته، سبع بقرات سمان يأكلهن سبع عجاف، ولم يجد من يعبرها إلا يوسف.",
+      "visual_requirements": [
+        "ancient Egyptian throne room",
+        "pharaoh silhouette",
+        "dreamy sequence of cows in background",
+        "cinematic Islamic historical illustration",
+        "no faces"
+      ]
+    },
+    {
+      "event": "التمكين في الأرض",
+      "narration": "خرج يوسف من السجن مكرماً، وجعله الملك على خزائن الأرض لينقذ مصر من المجاعة.",
+      "visual_requirements": [
+        "massive grain silos in ancient Egypt",
+        "workers storing wheat",
+        "golden sunlight",
+        "cinematic Islamic historical illustration",
+        "no faces"
+      ]
+    },
+    {
+      "event": "لقاء الإخوة",
+      "narration": "جاء إخوته يطلبون الطعام، فعرفهم وهم له منكرون.. وبعد سنوات التقى بهم وصارحهم وعفا عنهم.",
+      "visual_requirements": [
+        "grand hall in ancient Egypt",
+        "group of men bowing down",
+        "rich garments",
+        "cinematic Islamic historical illustration",
+        "no faces"
+      ]
+    },
+    {
+      "event": "تحقق الرؤيا",
+      "narration": "رفع أبويه على العرش، وخروا له سجداً.. وقال يا أبتِ هذا تأويل رؤياي من قبل، قد جعلها ربي حقاً.",
+      "visual_requirements": [
+        "golden throne room",
+        "elderly man and family silhouettes embracing",
+        "radiant light",
+        "cinematic Islamic historical illustration",
+        "no faces"
+      ]
+    }
+  ]
+}

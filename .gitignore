@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+.env
+.env.*
+
+# Secrets — never commit
+api/gemini_secret.txt
+api/pexels_secret.txt
+api/imagerouter_secret.txt
+api/client_secrets.json
+api/token.json
+
+# Generated media & runtime data
+outputs/
+cache/
+*.mp4
+*.mp3
+*.wav
+*.webm
+
+# Bundled binary extract (large; install ffmpeg locally)
+AI_Video_Gen.exe_extracted/
+*.exe
+
+# Large installers / local notes
+هام جدا.txt
+
+# IDE / OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Cursor / local
+assets/
+terminals/

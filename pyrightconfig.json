@@ -1,0 +1,19 @@
+{
+  "pythonVersion": "3.12",
+  "pythonPlatform": "Windows",
+  "pythonPath": "C:/Users/aalsa/AppData/Local/Programs/Python/Python312/python.exe",
+  "typeCheckingMode": "basic",
+  "reportMissingImports": "warning",
+  "reportMissingModuleSource": "warning",
+  "reportTypedDictNotRequiredAccess": "none",
+  "extraPaths": [
+    "./AI_Video_Gen.exe_extracted"
+  ],
+  "executionEnvironments": [
+    {
+      "root": ".",
+      "pythonVersion": "3.12",
+      "pythonPath": "C:/Users/aalsa/AppData/Local/Programs/Python/Python312/python.exe"
+    }
+  ]
+}
