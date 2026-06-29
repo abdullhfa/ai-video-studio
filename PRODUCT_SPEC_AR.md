@@ -380,11 +380,11 @@ script_source: auto
 
 ## 12. checklist تنفيذ Cursor
 
-- [ ] إخفاء `educational` و `general` من `#content_profile`
-- [ ] Toggle مبتدئ/متقدم في `index.html`
-- [ ] افتراضي `script_source = auto` في `DEFAULT_SETTINGS`
-- [ ] checkbox `quality_gate_enabled` في الوضع المتقدم
-- [ ] التأكد أن `/publish/approve` **لا** يستدعي upload تلقائي
+- [x] إخفاء `educational` و `general` من `#content_profile`
+- [x] Toggle مبتدئ/متقدم في `index.html`
+- [x] افتراضي `script_source = auto` في `DEFAULT_SETTINGS`
+- [x] checkbox `quality_gate_enabled` في الوضع المتقدم
+- [x] التأكد أن `/publish/approve` **لا** يستدعي upload تلقائي
 - [ ] اختبار سيناريو A وتسجيل `production_report.json`
 - [ ] Log يظهر `FFmpeg` وليس `MoviePy` فقط
 

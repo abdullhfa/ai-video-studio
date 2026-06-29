@@ -28,6 +28,8 @@
       padding-left: 3rem;
       padding-right: 1rem;
     }
+  
+    .ui-mode-beginner .advanced-only { display: none !important; }
   </style>
 </head>
   
@@ -204,6 +206,7 @@
       </div>
       <form id="form" class="rounded-2xl p-4 bg-white/5 border border-white/10 backdrop-blur-xl shadow-xl">
         <input type="hidden" name="content_profile" id="content_profile" value="islamic_story" />
+        <input type="hidden" id="script_source_beginner" value="auto" />
 
         <div class="mb-4 flex flex-wrap items-center justify-between gap-3 p-3 rounded-xl bg-[#0b1220]/70 border border-white/10">
           <div>
@@ -227,7 +230,7 @@
          <input id="topic" name="topic" required
                  class="form-input w-full rounded-xl text-white bg-[#0f172a] h-14 p-4 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-400/40"
 
-                 placeholder="مثال: 5 حقائق مذهلة عن مصر"/>
+                 placeholder="مثال: قصة سيدنا يوسف عليه السلام"/>
           <p id="topic_script_warning" class="hidden text-amber-300 text-xs mt-2"></p>
         </div>
 
@@ -242,35 +245,22 @@
           </select>
         </div>
 
-        <div class="mb-4">
+        <div class="mb-4 advanced-only">
           <label for="script_source" class="block text-white text-sm font-bold mb-2">مصدر النص والمشاهد</label>
           <select name="script_source" id="script_source"
                   class="form-select form-select-rtl w-full rounded-xl text-white bg-[#2d2938] h-14 focus:outline-none focus:ring-2 focus:ring-sky-400/40"
                   title="مصدر النص والمشاهد">
-            <option value="scenes_script" {% if settings.script_source|default('scenes') == 'scenes_script' %}selected{% endif %}>سيناريو نصي كامل (موصى به للدقة) ⭐</option>
-            <option value="scenes" {% if settings.script_source|default('scenes') == 'scenes' %}selected{% endif %}>مشاهد يدوية (بطاقات)</option>
-            <option value="auto" {% if settings.script_source|default('scenes') == 'auto' %}selected{% endif %}>تلقائي (Gemini ثم بديل محلي)</option>
-            <option value="local" {% if settings.script_source|default('scenes') == 'local' %}selected{% endif %}>نص محلي فقط (بدون Gemini)</option>
-            <option value="manual" {% if settings.script_source|default('scenes') == 'manual' %}selected{% endif %}>نص يدوي (سطر = جملة)</option>
-            <option value="gemini" {% if settings.script_source|default('scenes') == 'gemini' %}selected{% endif %}>Gemini فقط</option>
+            <option value="scenes_script" {% if settings.script_source|default('auto') == 'scenes_script' %}selected{% endif %}>سيناريو نصي كامل (موصى به للدقة) ⭐</option>
+            <option value="scenes" {% if settings.script_source|default('auto') == 'scenes' %}selected{% endif %}>مشاهد يدوية (بطاقات)</option>
+            <option value="auto" {% if settings.script_source|default('auto') == 'auto' %}selected{% endif %}>تلقائي (Gemini ثم بديل محلي)</option>
+            <option value="local" {% if settings.script_source|default('auto') == 'local' %}selected{% endif %}>نص محلي فقط (بدون Gemini)</option>
+            <option value="manual" {% if settings.script_source|default('auto') == 'manual' %}selected{% endif %}>نص يدوي (سطر = جملة)</option>
+            <option value="gemini" {% if settings.script_source|default('auto') == 'gemini' %}selected{% endif %}>Gemini فقط</option>
           </select>
           <p class="text-[#a59db8] text-xs mt-2">للدقة الكاملة: اختر «سيناريو نصي كامل» وحدّد الشخصيات والطريقة والصوت لكل مشهد.</p>
         </div>
 
-        <div class="mb-4">
-          <label for="content_profile" class="block text-white text-sm font-bold mb-2">نوع المحتوى</label>
-          <select name="content_profile" id="content_profile"
-                  class="form-select form-select-rtl w-full rounded-xl text-white bg-[#2d2938] h-14 focus:outline-none focus:ring-2 focus:ring-emerald-400/40"
-                  title="نوع المحتوى">
-            <option value="auto" {% if settings.content_profile|default('auto') == 'auto' %}selected{% endif %}>تلقائي (يكتشف من الموضوع)</option>
-            <option value="educational" {% if settings.content_profile|default('auto') == 'educational' %}selected{% endif %}>تعليمي / تقني (BTEC, Flutter...)</option>
-            <option value="islamic_story" {% if settings.content_profile|default('auto') == 'islamic_story' %}selected{% endif %}>قصة إسلامية (AI Images)</option>
-            <option value="general" {% if settings.content_profile|default('auto') == 'general' %}selected{% endif %}>عام</option>
-          </select>
-          <p class="text-[#a59db8] text-xs mt-2">للقصص الإسلامية: يُقسّم السيناريو زمنياً ويُولّد صور AI بدل فيديوهات stock العشوائية.</p>
-        </div>
-
-        <div id="islamic_options_box" class="mb-4 space-y-3 p-4 rounded-xl bg-[#0b1220]/70 border border-amber-500/25">
+        <div id="islamic_options_box" class="advanced-only mb-4 space-y-3 p-4 rounded-xl bg-[#0b1220]/70 border border-amber-500/25">
           <h4 class="text-white font-bold">🕌 إعدادات القصص الإسلامية</h4>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
             <label class="flex items-center gap-2 text-sm text-[#cbd5e1]">
@@ -297,6 +287,11 @@
               <input type="checkbox" name="force_fresh_media" id="force_fresh_media" class="rounded"
                 {% if settings.force_fresh_media|default(false) %}checked{% endif %} />
               🧪 اختبار: وسائط جديدة 100% (تعطيل Cache + FLUX فعلي)
+            </label>
+            <label class="flex items-center gap-2 text-sm text-violet-200 font-semibold">
+              <input type="checkbox" name="quality_gate_enabled" id="quality_gate_enabled" class="rounded"
+                {% if settings.quality_gate_enabled|default(true) %}checked{% endif %} />
+              🛡️ Quality Gate — فحص جودة الصور قبل الترميز
             </label>
             <label class="flex items-center gap-2 text-sm text-[#cbd5e1]">
               <input type="checkbox" name="hook_scene" id="hook_scene" class="rounded"
@@ -359,7 +354,7 @@
           <p class="text-[#a59db8] text-xs">الخطوط: Amiri / Noto Naskh / Cairo مع دعم RTL والتشكيل في شرائح الآيات والنصوص.</p>
         </div>
 
-        <div id="research_preview_box" class="mb-4 hidden p-4 rounded-xl bg-[#0b1220]/70 border border-emerald-500/30 space-y-2">
+        <div id="research_preview_box" class="advanced-only mb-4 hidden p-4 rounded-xl bg-[#0b1220]/70 border border-emerald-500/30 space-y-2">
           <div class="flex flex-wrap items-center justify-between gap-2">
             <div class="flex flex-wrap items-center gap-2">
               <h4 class="text-white font-bold">🔎 نتيجة البحث والتخطيط</h4>
@@ -377,7 +372,7 @@
           <p id="research_scenes_info" class="text-emerald-300 text-xs"></p>
         </div>
 
-        <div id="quality_gate_box" class="mb-4 hidden p-4 rounded-xl bg-[#0b1220]/70 border border-violet-500/30 space-y-3">
+        <div id="quality_gate_box" class="advanced-only mb-4 hidden p-4 rounded-xl bg-[#0b1220]/70 border border-violet-500/30 space-y-3">
           <div class="flex flex-wrap items-center justify-between gap-2">
             <h4 class="text-white font-bold">🛡️ بوابة جودة الوسائط</h4>
             <button type="button" id="refresh_quality_gate_btn"
@@ -389,7 +384,7 @@
           <div id="quality_gate_scenes" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3"></div>
         </div>
 
-        <div id="scenes_script_box" class="mb-4 hidden space-y-3 p-4 rounded-xl bg-[#0b1220]/70 border border-amber-500/30">
+        <div id="scenes_script_box" class="advanced-only mb-4 hidden space-y-3 p-4 rounded-xl bg-[#0b1220]/70 border border-amber-500/30">
           <div class="flex flex-wrap items-center justify-between gap-2">
             <h4 class="text-white font-bold text-lg">📝 سيناريو المشاهد (نص كامل)</h4>
             <div class="flex flex-wrap gap-2">
@@ -413,7 +408,7 @@
           </details>
         </div>
 
-        <div id="scenes_box" class="mb-4 space-y-3 p-4 rounded-xl bg-[#0b1220]/70 border border-white/10">
+        <div id="scenes_box" class="advanced-only mb-4 space-y-3 p-4 rounded-xl bg-[#0b1220]/70 border border-white/10">
           <div class="flex flex-wrap items-center justify-between gap-3">
             <h4 class="text-white font-bold text-lg">🎬 المشاهد</h4>
             <div class="flex flex-wrap gap-2">
@@ -434,7 +429,7 @@
           <input type="hidden" name="custom_scenes" id="custom_scenes_input" value="[]" />
         </div>
 
-        <div id="custom_script_box" class="mb-4 hidden">
+        <div id="custom_script_box" class="advanced-only mb-4 hidden">
           <label class="block text-white text-sm font-bold mb-2">النص اليدوي (سطر = جملة)</label>
           <textarea name="custom_script" rows="6"
                     class="form-textarea w-full rounded-xl text-white bg-[#0f172a] p-4 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-400/40"
@@ -465,16 +460,16 @@
         </div>
 
         <div class="mb-4">
-          <label for="media_source" class="block text-white text-sm font-bold mb-2">العناصر البصرية في الفيديو</label>
+          <div class="mb-4 advanced-only"><label for="media_source" class="block text-white text-sm font-bold mb-2">العناصر البصرية في الفيديو</label>
           <select id="media_source" name="media_source"
                   class="form-select form-select-rtl w-full rounded-xl text-white bg-[#2d2938] h-14 focus:outline-none focus:ring-2 focus:ring-sky-400/40"
                   title="العناصر البصرية في الفيديو">
             <option value="images" {% if settings.media_source == 'images' %}selected{% endif %}>صور (بالذكاء الاصطناعي)</option>
             <option value="videos" {% if settings.media_source == 'videos' %}selected{% endif %}>فيديوهات </option>
           </select>
-        </div>
+        </div></div>
 
-        <div class="mb-4">
+        <div class="mb-4 advanced-only">
           <label for="caption_enabled" class="block text-white text-sm font-bold mb-2">تفعيل الكابشن</label>
           <select name="caption_enabled" id="caption_enabled"
                   class="form-select form-select-rtl w-full rounded-xl text-white bg-[#2d2938] h-14 focus:outline-none focus:ring-2 focus:ring-sky-400/40"
@@ -484,7 +479,7 @@
           </select>
         </div>
 
-        <div id="caption_settings" class="space-y-4 p-4 rounded-xl mb-4 bg-[#0b1220]/70 border border-white/10">
+        <div id="caption_settings" class="advanced-only space-y-4 p-4 rounded-xl mb-4 bg-[#0b1220]/70 border border-white/10">
 
           <h4 class="text-white font-bold text-lg mb-3">إعدادات الكابشن</h4>
           <div>
@@ -1688,6 +1683,35 @@
 
     refreshPlaylistsBtn.onclick = refreshPlaylists;
 
+
+    // ---- UI mode: beginner / advanced (PRODUCT_SPEC_AR) ----
+    const uiModeBeginnerBtn = document.getElementById("ui_mode_beginner");
+    const uiModeAdvancedBtn = document.getElementById("ui_mode_advanced");
+    let uiMode = localStorage.getItem("ui_mode") || "beginner";
+
+    function applyUiMode(mode) {
+      uiMode = mode === "advanced" ? "advanced" : "beginner";
+      localStorage.setItem("ui_mode", uiMode);
+      document.querySelector(".app-shell")?.classList.toggle("ui-mode-beginner", uiMode === "beginner");
+      const on = "rounded-full h-10 px-5 text-sm font-bold text-white ring-2 ";
+      const off = "rounded-full h-10 px-5 text-sm font-bold text-white ";
+      if (uiModeBeginnerBtn) {
+        uiModeBeginnerBtn.className = off + (uiMode === "beginner" ? "bg-emerald-600 ring-emerald-400/60" : "bg-slate-700 hover:bg-slate-600");
+      }
+      if (uiModeAdvancedBtn) {
+        uiModeAdvancedBtn.className = off + (uiMode === "advanced" ? "bg-indigo-600 ring-indigo-400/60" : "bg-slate-700 hover:bg-slate-600");
+      }
+    }
+    if (uiModeBeginnerBtn) uiModeBeginnerBtn.onclick = () => applyUiMode("beginner");
+    if (uiModeAdvancedBtn) uiModeAdvancedBtn.onclick = () => applyUiMode("advanced");
+    applyUiMode(uiMode);
+
+    function applyBeginnerFormDefaults(fd) {
+      if (uiMode !== "beginner") return;
+      fd.set("content_profile", "islamic_story");
+      fd.set("script_source", "auto");
+    }
+
     function appendIslamicOptions(fd) {
       const quran = document.getElementById("include_quran");
       const hadith = document.getElementById("include_hadith");
@@ -1705,12 +1729,16 @@
       if (hook) fd.set("hook_scene", hook.checked ? "true" : "false");
       if (cliff) fd.set("cliffhanger", cliff.checked ? "true" : "false");
       if (lesson) fd.set("lesson_summary", lesson.checked ? "true" : "false");
+
+      const qgate = document.getElementById("quality_gate_enabled");
+      if (qgate) fd.set("quality_gate_enabled", qgate.checked ? "true" : "false");
     }
 
     // ---- Save current settings (unified & fixed) ----
     async function saveCurrentSettings() {
       const fd = new FormData(form);
       appendIslamicOptions(fd);
+      applyBeginnerFormDefaults(fd);
       // add YouTube fields (outside the form)
       fd.append("upload_enabled", document.getElementById("upload_enabled").value);
       fd.append("youtube_privacy", document.querySelector('select[name="youtube_privacy"]').value);
@@ -1734,6 +1762,7 @@
       e.preventDefault();
       const fd = new FormData(form);
       appendIslamicOptions(fd);
+      applyBeginnerFormDefaults(fd);
       fd.append("upload_enabled", document.getElementById("upload_enabled").value);
       fd.append("youtube_privacy", document.querySelector('select[name="youtube_privacy"]').value);
       applyDurationToFormData(fd);
