@@ -854,6 +854,13 @@ async def save_settings_endpoint(
     hook_scene: bool | None = None,
     cliffhanger: bool | None = None,
     lesson_summary: bool | None = None,
+    image_provider: str | None = None,
+    local_image_api_url: str | None = None,
+    local_image_backend: str | None = None,
+    local_image_model: str | None = None,
+    local_image_enabled: bool | None = None,
+    free_mode: bool | None = None,
+    allow_paid_providers: bool | None = None,
 ):
     settings = _build_settings(
         voice_name=voice_name,
@@ -892,6 +899,13 @@ async def save_settings_endpoint(
         hook_scene=hook_scene,
         cliffhanger=cliffhanger,
         lesson_summary=lesson_summary,
+        image_provider=image_provider,
+        local_image_api_url=local_image_api_url,
+        local_image_backend=local_image_backend,
+        local_image_model=local_image_model,
+        local_image_enabled=local_image_enabled,
+        free_mode=free_mode,
+        allow_paid_providers=allow_paid_providers,
     )
     _save_settings(settings)
     return {"ok": True, "settings": settings}
@@ -989,7 +1003,7 @@ def _log_generation_banner(settings: dict[str, Any]) -> None:
     if fresh:
         _log("🧹 وضع الوسائط الجديدة: Cache معطّل — كل الصور تُولَّد من جديد")
     elif cache_on:
-        _log("♻️ Cache مفعّل — قد تُستخدم صور/صوت محفوظة (عطّله لاختبار التوليد المحلي)"))
+        _log("♻️ Cache مفعّل — قد تُستخدم صور/صوت محفوظة (عطّله لاختبار التوليد المحلي)")
 
 
 def _run_generation(topic: str, settings: dict[str, Any]) -> None:
@@ -1079,6 +1093,13 @@ async def generate_video_post(
     hook_scene: bool = Form(True),
     cliffhanger: bool = Form(True),
     lesson_summary: bool = Form(True),
+    image_provider: str = Form("local"),
+    local_image_api_url: str = Form("http://127.0.0.1:7860"),
+    local_image_backend: str = Form("automatic1111"),
+    local_image_model: str = Form(""),
+    local_image_enabled: bool = Form(True),
+    free_mode: bool = Form(True),
+    allow_paid_providers: bool = Form(False),
 ):
     settings = _build_settings(
         voice_name=voice_name,
@@ -1117,6 +1138,13 @@ async def generate_video_post(
         hook_scene=hook_scene,
         cliffhanger=cliffhanger,
         lesson_summary=lesson_summary,
+        image_provider=image_provider,
+        local_image_api_url=local_image_api_url,
+        local_image_backend=local_image_backend,
+        local_image_model=local_image_model,
+        local_image_enabled=local_image_enabled,
+        free_mode=free_mode,
+        allow_paid_providers=allow_paid_providers,
     )
     _save_settings(settings)
     _start_generation(topic, settings)

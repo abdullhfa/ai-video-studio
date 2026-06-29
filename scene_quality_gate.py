@@ -103,9 +103,9 @@ def log_scene_quality_block(
         return
     settings = settings or {}
     if include_model:
-        from video_pipeline import _imagerouter_model
+        from image_providers import image_provider_label
 
-        log(f"  🎨 ImageRouter Model: {_imagerouter_model(settings)}")
+        log(f"  🎨 Image Provider: {image_provider_label(settings)}")
     if report.get("ok"):
         gate = "passed"
     else:
@@ -136,12 +136,14 @@ def save_quality_gate_report(
     topic: str,
     settings: dict[str, Any] | None = None,
 ) -> Path:
-    from video_pipeline import _imagerouter_model
+    from image_providers import image_provider_info
 
     settings = settings or {}
+    provider_info = image_provider_info(settings)
     payload = {
         "topic": topic,
-        "imagerouter_model": _imagerouter_model(settings),
+        "image_provider": provider_info,
+        "imagerouter_model": settings.get("imagerouter_model"),
         "scenes": [
             {
                 "index": idx + 1,

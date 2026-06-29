@@ -91,7 +91,10 @@ def scene_fingerprint(scene: Scene, topic: str, settings: dict[str, Any] | None 
         "narrator_style": settings.get("narrator_style"),
         "arabic_font": settings.get("arabic_font"),
         "imagerouter_model": settings.get("imagerouter_model") or "black-forest-labs/FLUX-1-schnell",
-        "pipeline_version": "2.4.0",
+        "image_provider": settings.get("image_provider") or "local",
+        "local_image_backend": settings.get("local_image_backend") or "automatic1111",
+        "local_image_model": settings.get("local_image_model") or "",
+        "pipeline_version": "2.5.0",
     }
     raw = json.dumps(payload, ensure_ascii=False, sort_keys=True)
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()[:20]

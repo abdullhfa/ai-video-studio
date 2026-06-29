@@ -354,6 +354,53 @@
           <p class="text-[#a59db8] text-xs">الخطوط: Amiri / Noto Naskh / Cairo مع دعم RTL والتشكيل في شرائح الآيات والنصوص.</p>
         </div>
 
+        <div id="free_local_mode_box" class="advanced-only mb-4 space-y-3 p-4 rounded-xl bg-[#0b1220]/70 border border-emerald-500/30">
+          <h4 class="text-white font-bold">🆓 Local Free Video Pipeline</h4>
+          <p class="text-[#a59db8] text-xs">صوت مجاني + Pexels B-roll + توليد صور محلي على GPU — بدون مزودات مدفوعة.</p>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <label class="flex items-center gap-2 text-sm text-emerald-200 font-semibold">
+              <input type="checkbox" name="free_mode" id="free_mode" class="rounded"
+                {% if settings.free_mode|default(true) %}checked{% endif %} />
+              Free Mode — حظر المزودات المدفوعة
+            </label>
+            <label class="flex items-center gap-2 text-sm text-[#cbd5e1]">
+              <input type="checkbox" name="local_image_enabled" id="local_image_enabled" class="rounded"
+                {% if settings.local_image_enabled|default(true) %}checked{% endif %} />
+              تفعيل توليد الصور المحلي (GPU)
+            </label>
+            <label class="flex flex-col gap-1 text-sm text-[#cbd5e1]">
+              <span>مزود الصور</span>
+              <select name="image_provider" id="image_provider"
+                class="form-select form-select-rtl w-full rounded-xl text-white bg-[#2d2938] h-12 text-sm">
+                <option value="local" {% if settings.image_provider|default('local') == 'local' %}selected{% endif %}>local — GPU محلي</option>
+                <option value="imagerouter" {% if settings.image_provider|default('local') == 'imagerouter' %}selected{% endif %}>imagerouter — مدفوع</option>
+                <option value="none" {% if settings.image_provider|default('local') == 'none' %}selected{% endif %}>none — بدون AI</option>
+              </select>
+            </label>
+            <label class="flex flex-col gap-1 text-sm text-[#cbd5e1]">
+              <span>Backend محلي</span>
+              <select name="local_image_backend" id="local_image_backend"
+                class="form-select form-select-rtl w-full rounded-xl text-white bg-[#2d2938] h-12 text-sm">
+                <option value="automatic1111" {% if settings.local_image_backend|default('automatic1111') == 'automatic1111' %}selected{% endif %}>Automatic1111 (--api)</option>
+                <option value="comfyui" {% if settings.local_image_backend|default('automatic1111') == 'comfyui' %}selected{% endif %}>ComfyUI</option>
+              </select>
+            </label>
+            <label class="flex flex-col gap-1 text-sm text-[#cbd5e1] md:col-span-2">
+              <span>Local API URL</span>
+              <input type="text" name="local_image_api_url" id="local_image_api_url"
+                value="{{ settings.local_image_api_url|default('http://127.0.0.1:7860') }}"
+                class="form-input w-full rounded-xl text-white bg-[#0f172a] h-12 px-3 text-sm" />
+            </label>
+            <label class="flex flex-col gap-1 text-sm text-[#cbd5e1] md:col-span-2">
+              <span>Checkpoint / Model (اختياري — A1111)</span>
+              <input type="text" name="local_image_model" id="local_image_model"
+                value="{{ settings.local_image_model|default('') }}"
+                placeholder="مثال: dreamshaper_8.safetensors"
+                class="form-input w-full rounded-xl text-white bg-[#0f172a] h-12 px-3 text-sm" />
+            </label>
+          </div>
+        </div>
+
         <div id="research_preview_box" class="advanced-only mb-4 hidden p-4 rounded-xl bg-[#0b1220]/70 border border-emerald-500/30 space-y-2">
           <div class="flex flex-wrap items-center justify-between gap-2">
             <div class="flex flex-wrap items-center gap-2">
@@ -1732,6 +1779,28 @@
 
       const qgate = document.getElementById("quality_gate_enabled");
       if (qgate) fd.set("quality_gate_enabled", qgate.checked ? "true" : "false");
+
+      const freeMode = document.getElementById("free_mode");
+      const localEnabled = document.getElementById("local_image_enabled");
+      const imageProvider = document.getElementById("image_provider");
+      const localBackend = document.getElementById("local_image_backend");
+      const localApiUrl = document.getElementById("local_image_api_url");
+      const localModel = document.getElementById("local_image_model");
+      if (freeMode) fd.set("free_mode", freeMode.checked ? "true" : "false");
+      if (localEnabled) fd.set("local_image_enabled", localEnabled.checked ? "true" : "false");
+      if (imageProvider) fd.set("image_provider", imageProvider.value || "local");
+      if (localBackend) fd.set("local_image_backend", localBackend.value || "automatic1111");
+      if (localApiUrl) fd.set("local_image_api_url", localApiUrl.value || "http://127.0.0.1:7860");
+      if (localModel) fd.set("local_image_model", localModel.value || "");
+      if (freeMode && freeMode.checked) {
+        fd.set("allow_paid_providers", "false");
+        if (imageProvider && imageProvider.value === "imagerouter") {
+          imageProvider.value = "local";
+          fd.set("image_provider", "local");
+        }
+      } else {
+        fd.set("allow_paid_providers", imageProvider && imageProvider.value === "imagerouter" ? "true" : "false");
+      }
     }
 
     // ---- Save current settings (unified & fixed) ----
