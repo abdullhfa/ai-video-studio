@@ -1096,7 +1096,14 @@ def _imagerouter_generate_url(prompt: str, width: int, height: int, settings: di
     )
     response.raise_for_status()
     payload = response.json()
-    return str(payload["data"][0]["url"])
+    if payload.get("error"):
+        err = payload["error"]
+        message = err.get("message") if isinstance(err, dict) else str(err)
+        raise RuntimeError(f"ImageRouter: {message}")
+    data = payload.get("data")
+    if not data:
+        raise RuntimeError(f"ImageRouter: unexpected response keys {list(payload.keys())}")
+    return str(data[0]["url"])
 
 
 def generate_single_ai_image(
@@ -1974,8 +1981,16 @@ def fetch_all_scene_visuals(
                                     "no clear faces, cinematic golden light, no text"
                                 )
                             retry_scene["ai_prompt"] = retry_scene["visual"]
-                    retry_scene["media_source"] = "ai_image"
-                    retry_scene["media_type"] = "ai"
+                    if (
+                        retry_scene.get("router_locked")
+                        and retry_scene.get("content_profile") == "islamic_story"
+                        and str(retry_scene.get("scene_kind") or "").lower() == "landscape"
+                    ):
+                        retry_scene["media_source"] = "pexels_video"
+                        retry_scene["media_type"] = "pexels"
+                    else:
+                        retry_scene["media_source"] = "ai_image"
+                        retry_scene["media_type"] = "ai"
                     retry_scene["bypass_image_cache"] = True
                 path = fetch_scene_visual(retry_scene, idx, topic, preset, log, settings)
         paths.append(path)

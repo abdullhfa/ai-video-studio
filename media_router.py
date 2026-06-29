@@ -139,11 +139,10 @@ def _route_islamic_scene(
     routed["router_locked"] = True
     routed["scene_kind"] = scene_kind
 
-    if presentation == "quran_text" or routed.get("quran_verse"):
-        if presentation == "quran_text" or str(routed.get("media_source") or "") == "quran_slide":
-            routed["presentation"] = "quran_text"
-            routed["media_source"] = "quran_slide"
-            return routed
+    if presentation == "quran_text" or str(routed.get("media_source") or "") == "quran_slide":
+        routed["presentation"] = "quran_text"
+        routed["media_source"] = "quran_slide"
+        return routed
 
     if scene_kind == "closing_lesson":
         if routed.get("quran_verse") and presentation in {"", "quran_text", "ken_burns_zoom"}:
@@ -442,9 +441,11 @@ def apply_islamic_scene_variety(
                 item["media_type"] = "ai"
                 item["media_source"] = "ai_image"
         elif not quran_assigned and include_quran and item.get("quran_verse"):
-            item["presentation"] = "quran_text"
-            item["media_source"] = "quran_slide"
-            quran_assigned = True
+            role = str(item.get("engagement_role") or "").lower()
+            if kind == "closing_lesson" or role in {"lesson", "summary", "close"}:
+                item["presentation"] = "quran_text"
+                item["media_source"] = "quran_slide"
+                quran_assigned = True
         elif not quran_assigned and idx == len(scenes) - 1 and include_quran and kind == "closing_lesson":
             item["presentation"] = "quran_text"
             item["media_source"] = "quran_slide"
