@@ -385,8 +385,8 @@ script_source: auto
 - [x] افتراضي `script_source = auto` في `DEFAULT_SETTINGS`
 - [x] checkbox `quality_gate_enabled` في الوضع المتقدم
 - [x] التأكد أن `/publish/approve` **لا** يستدعي upload تلقائي
-- [ ] اختبار سيناريو A وتسجيل `production_report.json`
-- [ ] Log يظهر `FFmpeg` وليس `MoviePy` فقط
+- [x] اختبار سيناريو A وتسجيل `production_report.json`
+- [x] Log يظهر `FFmpeg` وليس `MoviePy` فقط
 
 ---
 
