@@ -33,6 +33,12 @@ MEDIA_MIX_LONG = (
     ("screen", 10),
 )
 
+MEDIA_MIX_ISLAMIC_STORY = (
+    ("pexels", 25),
+    ("ai", 55),
+    ("slide", 20),
+)
+
 
 def clamp_duration(duration_sec: int) -> int:
     return max(MIN_DURATION_SEC, min(MAX_DURATION_SEC, duration_sec))
@@ -112,12 +118,21 @@ SceneT = TypeVar("SceneT")
 
 
 def assign_media_mix(scenes: list[SceneT], duration_sec: int) -> list[SceneT]:
-    if clamp_duration(duration_sec) < 600 or not scenes:
+    if not scenes:
+        return scenes
+
+    is_islamic = any(
+        str(cast(Mapping[str, Any], s).get("content_profile") or "") == "islamic_story"
+        for s in scenes
+    )
+    mix = MEDIA_MIX_ISLAMIC_STORY if is_islamic else MEDIA_MIX_LONG
+    min_duration = 120 if is_islamic else 600
+    if clamp_duration(duration_sec) < min_duration:
         return scenes
 
     total = len(scenes)
     assigned: list[str] = []
-    for media_type, percent in MEDIA_MIX_LONG:
+    for media_type, percent in mix:
         assigned.extend([media_type] * round(total * percent / 100))
 
     while len(assigned) < total:

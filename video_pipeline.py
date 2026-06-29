@@ -1446,6 +1446,25 @@ def _fetch_ai_visual_with_fallback(
         log(f"  ⚠️ مشهد {idx + 1}: AI غير متاح ({_short_error(exc)})")
 
     islamic_locked = scene.get("router_locked") and scene.get("content_profile") == "islamic_story"
+    media_source = str(scene.get("media_source") or "").lower()
+
+    if islamic_locked and media_source == "ai_image":
+        log(f"  • مشهد {idx + 1}: بديل إسلامي — شريحة نصية")
+        try:
+            return _scene_slide_fallback(scene, visual, width, height, idx)
+        except Exception as slide_exc:
+            log(f"  ⚠️ مشهد {idx + 1}: شريحة ({_short_error(slide_exc)})")
+        try:
+            log(f"  • مشهد {idx + 1}: بديل إسلامي — فيديو B-roll")
+            broll_scene: Scene = dict(scene)
+            if not broll_scene.get("search_query"):
+                broll_scene["search_query"] = (
+                    "ancient middle east desert cinematic sunset golden hour no people no faces"
+                )
+            return fetch_one_pexels_video(visual, topic, idx, orientation, width, height, broll_scene)
+        except Exception as vid_exc:
+            log(f"  ⚠️ مشهد {idx + 1}: B-roll ({_short_error(vid_exc)})")
+        return _scene_slide_fallback(scene, visual, width, height, idx)
 
     try:
         log(f"  • مشهد {idx + 1}: بديل — صورة Pexels")
@@ -1814,6 +1833,22 @@ def fetch_scene_visual(
     if media_source == "pexels_photo":
         log(f"  • مشهد {idx + 1}: صورة Pexels — {_visual_search_query(visual, topic, scene)}")
         return fetch_one_pexels_photo(visual, topic, idx, orientation, width, height, scene, settings, log)
+    if media_source == "pexels_video":
+        query = scene.get("search_query") or _visual_search_query(visual, topic, scene)
+        log(f"  • مشهد {idx + 1}: فيديو Pexels B-roll — {query}")
+        try:
+            return fetch_one_pexels_video(visual, topic, idx, orientation, width, height, scene)
+        except Exception as exc:
+            log(f"  ⚠️ مشهد {idx + 1}: فيديو Pexels ({_short_error(exc)})")
+            if scene.get("router_locked") and scene.get("content_profile") == "islamic_story":
+                try:
+                    log(f"  • مشهد {idx + 1}: بديل B-roll — صورة Pexels")
+                    return fetch_one_pexels_photo(
+                        visual, topic, idx, orientation, width, height, scene, settings, log
+                    )
+                except Exception:
+                    return _scene_slide_fallback(scene, visual, width, height, idx)
+            return _scene_slide_fallback(scene, visual, width, height, idx)
     if media_source == "ai_image":
         log(f"  • مشهد {idx + 1}: صورة AI مخصصة")
         return _fetch_ai_visual_with_fallback(scene, visual, topic, idx, preset, log, settings)

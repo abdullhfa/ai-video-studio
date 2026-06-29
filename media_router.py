@@ -279,7 +279,6 @@ def route_scenes_media(scenes: list[Scene], topic: str, settings: dict[str, Any]
 
         duration = int(settings.get("video_duration_sec") or 300)
         routed = apply_islamic_scene_variety(routed, duration, topic, include_quran=include_quran)
-        routed = apply_islamic_cinematic_broll(routed, topic, duration)
 
         from character_memory import apply_character_memory, mark_pivotal_scenes
         from scene_confidence import annotate_scenes_confidence
@@ -290,6 +289,7 @@ def route_scenes_media(scenes: list[Scene], topic: str, settings: dict[str, Any]
         routed = assign_visual_variation_seeds(routed)
         max_pivotal = int(settings.get("max_ai_video_scenes", 3) or 3)
         routed = mark_pivotal_scenes(routed, topic, max_pivotal=max(1, min(6, max_pivotal)))
+        routed = apply_islamic_cinematic_broll(routed, topic, duration)
         routed = annotate_scenes_confidence(routed)
         routed = pre_estimate_scene_durations(routed, settings)
 
@@ -338,6 +338,46 @@ PRESENTATION_CYCLE = (
 )
 
 
+def apply_islamic_cinematic_broll(
+    scenes: list[Scene],
+    topic: str,
+    duration_sec: int,
+) -> list[Scene]:
+    """Insert B-roll video slots (~20%) between story beats for cinematic pacing."""
+    if len(scenes) < 3:
+        return scenes
+
+    broll_indices: set[int] = set()
+    if len(scenes) >= 5:
+        broll_indices.add(1)
+        broll_indices.add(len(scenes) - 2)
+    elif len(scenes) >= 4:
+        broll_indices.add(1)
+
+    mixed: list[Scene] = []
+    for idx, scene in enumerate(scenes):
+        item = dict(scene)
+        if idx not in broll_indices:
+            mixed.append(item)  # type: ignore[arg-type]
+            continue
+        if item.get("quran_verse") or str(item.get("presentation") or "").lower() == "quran_text":
+            mixed.append(item)  # type: ignore[arg-type]
+            continue
+        if str(item.get("scene_kind") or "").lower() == "map_site":
+            mixed.append(item)  # type: ignore[arg-type]
+            continue
+        if item.get("is_pivotal"):
+            mixed.append(item)  # type: ignore[arg-type]
+            continue
+        item["scene_kind"] = "landscape"
+        item["media_type"] = "pexels"
+        item["media_source"] = "pexels_video"
+        item["search_query"] = _landscape_broll_query(item, topic)  # type: ignore[arg-type]
+        item["presentation"] = "static"
+        mixed.append(item)  # type: ignore[arg-type]
+    return mixed
+
+
 def apply_islamic_scene_variety(
     scenes: list[Scene],
     duration_sec: int,
@@ -346,7 +386,7 @@ def apply_islamic_scene_variety(
     include_quran: bool = True,
 ) -> list[Scene]:
     """Mix presentations so long Islamic videos are not all static AI images."""
-    if len(scenes) < 4:
+    if len(scenes) < 2:
         return scenes
 
     varied: list[Scene] = []
@@ -357,18 +397,24 @@ def apply_islamic_scene_variety(
 
     for idx, scene in enumerate(scenes):
         item = dict(scene)
-        if str(item.get("presentation") or "").strip():
+        kind = str(item.get("scene_kind") or "").lower()
+        existing_presentation = str(item.get("presentation") or "").strip().lower()
+
+        if existing_presentation in {"quran_text", "map_slide"}:
+            varied.append(item)  # type: ignore[arg-type]
+            continue
+        if item.get("media_source") == "pexels_video" and kind == "landscape":
             varied.append(item)  # type: ignore[arg-type]
             continue
 
-        kind = str(item.get("scene_kind") or "").lower()
         if kind == "map_site":
             item["presentation"] = "map_slide"
             item["media_source"] = "map_slide"
         elif kind == "landscape":
-            item["presentation"] = "ken_burns_pan"
+            item["presentation"] = "static"
             item["media_type"] = "pexels"
-            item["media_source"] = "pexels_photo"
+            item["media_source"] = "pexels_video"
+            item["search_query"] = _landscape_broll_query(item, topic)  # type: ignore[arg-type]
         elif not quran_assigned and idx == quran_slot and include_quran:
             item["presentation"] = "quran_text"
             item["media_source"] = "quran_slide"
