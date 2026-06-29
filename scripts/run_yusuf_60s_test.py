@@ -68,7 +68,9 @@ def _print_config(settings: dict) -> None:
     for key in (
         "video_duration_sec",
         "script_source",
-        "imagerouter_model",
+        "image_provider",
+        "free_mode",
+        "local_image_api_url",
         "quality_gate_enabled",
         "scene_cache_enabled",
         "force_fresh_media",
