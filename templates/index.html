@@ -203,6 +203,25 @@
         <input type="hidden" id="upload_enabled" value="false" />
       </div>
       <form id="form" class="rounded-2xl p-4 bg-white/5 border border-white/10 backdrop-blur-xl shadow-xl">
+        <input type="hidden" name="content_profile" id="content_profile" value="islamic_story" />
+
+        <div class="mb-4 flex flex-wrap items-center justify-between gap-3 p-3 rounded-xl bg-[#0b1220]/70 border border-white/10">
+          <div>
+            <p class="text-white text-sm font-bold">مستوى الواجهة</p>
+            <p class="text-[#a59db8] text-xs mt-1">نوع المحتوى: قصة إسلامية (ثابت في هذه المرحلة)</p>
+          </div>
+          <div class="flex gap-2">
+            <button type="button" id="ui_mode_beginner"
+              class="rounded-full h-10 px-5 text-sm font-bold text-white bg-emerald-600 ring-2 ring-emerald-400/60">
+              مبتدئ
+            </button>
+            <button type="button" id="ui_mode_advanced"
+              class="rounded-full h-10 px-5 text-sm font-bold text-white bg-slate-700 hover:bg-slate-600">
+              متقدم
+            </button>
+          </div>
+        </div>
+
         <div class="mb-4">
           <label for="topic" class="block text-white text-sm font-bold mb-2">موضوع الفيديو</label>
          <input id="topic" name="topic" required
